@@ -35,4 +35,4 @@ cp .config ${OPENWRT_BUILD_OPENWRT_DIRECTORY}
 make --directory=${OPENWRT_BUILD_OPENWRT_DIRECTORY} -j${OPENWRT_BUILD_JOB_COUNT}
 
 # Create images and move output folder to local directory
-mv ${OPENWRT_BUILD_OPENWRT_DIRECTORY}/bin .
+mv ${OPENWRT_BUILD_OPENWRT_DIRECTORY}/bin ./build_"$(date +"%Y%m%d_%I%M")"
