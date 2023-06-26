@@ -19,4 +19,4 @@ cd openwrt-build
 
 The script will install the required build tools via apt so it will prompt for your password.
 The build will take some time depending on your environment.
-If nothing fails, there should be a "bin" directory which contains the built packages and images.
+If nothing fails, there should be a "Build_YYYYMMDD_HHMM" directory which contains the built packages and images.
