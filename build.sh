@@ -27,6 +27,9 @@ for patch in patches/openwrt/*.patch; do
 	git apply --ignore-space-change --directory=${OPENWRT_BUILD_OPENWRT_DIRECTORY} "$patch"
 done
 
+./${OPENWRT_BUILD_OPENWRT_DIRECTORY}/scripts/feeds update -a
+./${OPENWRT_BUILD_OPENWRT_DIRECTORY}/scripts/feeds install -a
+
 # Copy configuration to OpenWrt directory
 cp .config ${OPENWRT_BUILD_OPENWRT_DIRECTORY}
 make --directory=${OPENWRT_BUILD_OPENWRT_DIRECTORY} -j${OPENWRT_BUILD_JOB_COUNT}
