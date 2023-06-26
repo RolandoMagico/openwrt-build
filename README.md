@@ -1,5 +1,5 @@
 # D-Link COVR-X1860
-Scripts to build OpenWrt images for D-Link COVR-X1860. Tested on Linux Mint.
+Scripts to build an OpenWrt images for D-Link COVR-X1860 with the latest OpenWrt main branch. Tested on Linux Mint.
 
 HowTo:
 - Clone the D-Link_COVR-X1860 branch
