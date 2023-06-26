@@ -1,14 +1,14 @@
 diff --git a/tools/firmware-utils/patches/002-add-dlink-sge-image.patch b/tools/firmware-utils/patches/002-add-dlink-sge-image.patch
 new file mode 100644
-index 0000000000..ad9d2417d7
+index 0000000000..71bab9b418
 --- /dev/null
 +++ b/tools/firmware-utils/patches/002-add-dlink-sge-image.patch
 @@ -0,0 +1,883 @@
 +diff --git a/CMakeLists.txt b/CMakeLists.txt
-+index c1750d478c..d7d4ed2a7b 100644
++index c1750d4..d7d4ed2 100644
 +--- a/CMakeLists.txt
 ++++ b/CMakeLists.txt
-+@@ -40,6 +40,7 @@  FW_UTIL(buffalo-tftp src/buffalo-lib.c "" "")
++@@ -40,6 +40,7 @@ FW_UTIL(buffalo-tftp src/buffalo-lib.c "" "")
 + FW_UTIL(cros-vbutil "" "" "${OPENSSL_CRYPTO_LIBRARIES}")
 + FW_UTIL(dgfirmware "" "" "")
 + FW_UTIL(dgn3500sum "" "" "")
@@ -18,10 +18,10 @@ index 0000000000..ad9d2417d7
 + FW_UTIL(encode_crc "" "" "")
 +diff --git a/src/dlink-sge-image.c b/src/dlink-sge-image.c
 +new file mode 100644
-+index 0000000000..9b567f43ff
++index 0000000..9b567f4
 +--- /dev/null
 ++++ b/src/dlink-sge-image.c
-+@@ -0,0 +1,510 @@ 
++@@ -0,0 +1,510 @@
 ++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 ++/*
 ++ * Copyright (C) 2023 Sebastian Schaper <openwrt@sebastianschaper.net>
@@ -534,10 +534,10 @@ index 0000000000..ad9d2417d7
 ++}
 +diff --git a/src/dlink-sge-image.h b/src/dlink-sge-image.h
 +new file mode 100644
-+index 0000000000..8966cc97b8
++index 0000000..8966cc9
 +--- /dev/null
 ++++ b/src/dlink-sge-image.h
-+@@ -0,0 +1,349 @@ 
++@@ -0,0 +1,349 @@
 ++/* SPDX-License-Identifier: GPL-2.0-only */
 ++
 ++const unsigned char key1[] =
@@ -887,4 +887,3 @@ index 0000000000..ad9d2417d7
 ++w1+nGS0KL2+sJGFlDvc7fHJmVFZBqWeSQWPJTHimLI9yaIVS5mEnuBjKZpdUB57T
 ++-----END RSA PRIVATE KEY-----
 ++)";
-\ No newline at end of file
