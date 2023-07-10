@@ -1,10 +1,10 @@
-# D-Link COVR-X1860
-Scripts to build an OpenWrt images for D-Link COVR-X1860 with the latest OpenWrt main branch. Tested on Linux Mint.
+# D-Link_EAGLE_PRO_AI_M32
+Scripts to build an OpenWrt images for D-Link_EAGLE_PRO_AI_M32 with the latest OpenWrt main branch. Tested on Linux Mint.
 
 HowTo:
-- Clone the D-Link_COVR-X1860 branch
+- Clone the D-Link_EAGLE_PRO_AI_M32 branch
 ```
-git clone https://github.com/RolandoMagico/openwrt-build.git -b D-Link_COVR-X1860
+git clone https://github.com/RolandoMagico/openwrt-build.git -b D-Link_EAGLE_PRO_AI_M32
 ```
 
 - Goto the new directory
