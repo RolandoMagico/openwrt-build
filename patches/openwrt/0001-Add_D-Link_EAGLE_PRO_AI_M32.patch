@@ -1,0 +1,558 @@
+diff --git a/target/linux/mediatek/dts/mt7622-dlink-eagle-pro-ai-m32.dts b/target/linux/mediatek/dts/mt7622-dlink-eagle-pro-ai-m32.dts
+new file mode 100644
+index 0000000000..f65a5a5236
+--- /dev/null
++++ b/target/linux/mediatek/dts/mt7622-dlink-eagle-pro-ai-m32.dts
+@@ -0,0 +1,461 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++
++/dts-v1/;
++#include "mt7622.dtsi"
++#include "mt6380.dtsi"
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++/ {
++	model = "D-Link EAGLE PRO AI M32";
++	compatible = "dlink,eagle-pro-ai-m32", "mediatek,mt7622";
++
++	aliases {
++		led-boot = &status_orange;
++		led-failsafe = &status_red;
++		led-running = &status_white;
++		led-upgrade = &status_red;
++		serial0 = &uart0;
++		label-mac-device = &gmac0;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++		bootargs = "earlycon=uart8250,mmio32,0x11002000 console=ttyS0,115200n8 swiotlb=512";
++	};
++
++	cpus {
++		cpu@0 {
++			proc-supply = <&mt6380_vcpu_reg>;
++			sram-supply = <&mt6380_vm_reg>;
++		};
++
++		cpu@1 {
++			proc-supply = <&mt6380_vcpu_reg>;
++			sram-supply = <&mt6380_vm_reg>;
++		};
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		reset {
++			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
++			label = "reset";
++			linux,code = <KEY_RESTART>;
++		};
++
++		wps {
++			gpios = <&pio 102 GPIO_ACTIVE_LOW>;
++			label = "wps";
++			linux,code = <KEY_WPS_BUTTON>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		status_white: status_white {
++			label = "white:status";
++			gpios = <&pio 85 GPIO_ACTIVE_LOW>;
++		};
++
++		status_orange: status_orange {
++			label = "orange:status";
++			gpios = <&pio 20 GPIO_ACTIVE_LOW>;
++			default-state = "on";
++		};
++
++		status_red: status_red {
++			label = "red:status";
++			gpios = <&pio 17 GPIO_ACTIVE_LOW>;
++		};
++	};
++
++	memory {
++		reg = <0 0x40000000 0 0x40000000>;
++	};
++};
++
++&bch {
++	status = "okay";
++};
++
++&btif {
++	status = "okay";
++};
++
++&cir {
++	pinctrl-names = "default";
++	pinctrl-0 = <&irrx_pins>;
++	status = "okay";
++};
++
++&eth {
++	pinctrl-names = "default";
++	pinctrl-0 = <&eth_pins>;
++	status = "okay";
++
++	gmac0: mac@0 {
++		compatible = "mediatek,eth-mac";
++		nvmem-cells = <&macaddr_odm_83>;
++		nvmem-cell-names = "mac-address";
++		phy-mode = "2500base-x";
++		reg = <0>;
++
++		fixed-link {
++			full-duplex;
++			pause;
++			speed = <2500>;
++		};
++	};
++
++	mdio-bus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		switch@0 {
++			compatible = "mediatek,mt7531";
++			reg = <0>;
++			interrupt-controller;
++			#interrupt-cells = <1>;
++			interrupt-parent = <&pio>;
++			interrupts = <53 IRQ_TYPE_LEVEL_HIGH>;
++			reset-gpios = <&pio 54 0>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				port@2 {
++					reg = <2>;
++					label = "lan2";
++				};
++
++				port@3 {
++					reg = <3>;
++					label = "lan1";
++				};
++
++				wan: port@4 {
++					reg = <4>;
++					label = "wan";
++				};
++
++				port@6 {
++					reg = <6>;
++					ethernet = <&gmac0>;
++					phy-mode = "2500base-x";
++
++					fixed-link {
++						speed = <2500>;
++						full-duplex;
++						pause;
++					};
++				};
++			};
++		};
++	};
++};
++
++&pcie0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pcie0_pins>;
++	status = "okay";
++};
++
++&pcie1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pcie1_pins>;
++	status = "okay";
++};
++
++&pio {
++	eth_pins: eth-pins {
++		mux {
++			function = "eth";
++			groups = "mdc_mdio", "rgmii_via_gmac2";
++		};
++	};
++
++	irrx_pins: irrx-pins {
++		mux {
++			function = "ir";
++			groups =  "ir_1_rx";
++		};
++	};
++
++	irtx_pins: irtx-pins {
++		mux {
++			function = "ir";
++			groups =  "ir_1_tx";
++		};
++	};
++
++	pcie0_pins: pcie0-pins {
++		mux {
++			function = "pcie";
++			groups = "pcie0_pad_perst",
++				 "pcie0_1_waken",
++				 "pcie0_1_clkreq";
++		};
++	};
++
++	pcie1_pins: pcie1-pins {
++		mux {
++			function = "pcie";
++			groups = "pcie1_pad_perst",
++				 "pcie1_0_waken",
++				 "pcie1_0_clkreq";
++		};
++	};
++
++	pmic_bus_pins: pmic-bus-pins {
++		mux {
++			function = "pmic";
++			groups = "pmic_bus";
++		};
++	};
++
++	pwm7_pins: pwm1-2-pins {
++		mux {
++			function = "pwm";
++			groups = "pwm_ch7_2";
++		};
++	};
++
++	/* Serial NAND is shared pin with SPI-NOR */
++	serial_nand_pins: serial-nand-pins {
++		mux {
++			function = "flash";
++			groups = "snfi";
++		};
++	};
++
++	spic0_pins: spic0-pins {
++		mux {
++			function = "spi";
++			groups = "spic0_0";
++		};
++	};
++
++	spic1_pins: spic1-pins {
++		mux {
++			function = "spi";
++			groups = "spic1_0";
++		};
++	};
++
++	uart0_pins: uart0-pins {
++		mux {
++			function = "uart";
++			groups = "uart0_0_tx_rx";
++		};
++	};
++
++	uart2_pins: uart2-pins {
++		mux {
++			function = "uart";
++			groups = "uart2_1_tx_rx";
++		};
++	};
++
++	watchdog_pins: watchdog-pins {
++		mux {
++			function = "watchdog";
++			groups = "watchdog";
++		};
++	};
++};
++
++&pwm {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pwm7_pins>;
++	status = "okay";
++};
++
++&pwrap {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pmic_bus_pins>;
++	status = "okay";
++};
++
++&rtc {
++	status = "disabled";
++};
++
++&sata {
++	status = "disabled";
++};
++
++&sata_phy {
++	status = "disabled";
++};
++
++&slot0 {
++	wmac1: mt7915@0,0 {
++		reg = <0x0000 0 0 0 0>;
++		ieee80211-freq-limit = <5000000 6000000>;
++	};
++};
++
++&snfi {
++	pinctrl-names = "default";
++	pinctrl-0 = <&serial_nand_pins>;
++	status = "okay";
++
++	snand: flash@0 {
++		compatible = "spi-nand";
++		mediatek,bmt-table-size = <0x1000>;
++		mediatek,bmt-v2;
++		nand-ecc-engine = <&snfi>;
++		reg = <0>;
++		spi-rx-bus-width = <4>;
++		spi-tx-bus-width = <4>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "Preloader";
++				reg = <0x00000000 0x00080000>;
++				read-only;
++			};
++
++			partition@80000 {
++				label = "ATF";
++				reg = <0x00080000 0x00040000>;
++				read-only;
++			};
++
++			partition@C0000 {
++				label = "Bootloader";
++				reg = <0x000C0000 0x00080000>;
++				read-only;
++			};
++
++			partition@140000 {
++				label = "BootConfig";
++				reg = <0x00140000 0x00040000>;
++				read-only;
++			};
++
++			odm: partition@180000 {
++				compatible = "nvmem-cells";
++				label = "Odm";
++				reg = <0x00180000 0x00040000>;
++				read-only;
++
++				macaddr_odm_83: macaddr@83 {
++					reg = <0x83 0x6>;
++				};
++			};
++
++			config1: partition@1C0000 {
++				compatible = "nvmem-cells";
++				label = "Config1";
++				reg = <0x001C0000 0x00080000>;
++				#address-cells = <1>;
++				#size-cells = <1>;
++				read-only;
++			};
++
++			partition@240000 {
++				label = "Config2";
++				reg = <0x00240000 0x00080000>;
++				read-only;
++			};
++
++			partition@2C0000 {
++				label = "Kernel1";
++				reg = <0x002C0000 0x02D00000>;
++
++				compatible = "fixed-partitions";
++				#address-cells = <1>;
++				#size-cells = <1>;
++				partition@0 {
++					label = "kernel";
++					reg = <0x00000000 0x00800000>;
++				};
++
++				partition@800000 {
++					label = "ubi";
++					reg = <0x00800000 0x02500000>;
++				};
++			};
++
++			partition@2FC0000 {
++				label = "Kernel2";
++				reg = <0x02FC0000 0x02D00000>;
++				read-only;
++			};
++
++			factory: partition@5CC0000 {
++				label = "Factory";
++				reg = <0x05CC0000 0x00100000>;
++				read-only;
++			};
++
++			partition@5DC0000 {
++				label = "Mydlink";
++				reg = <0x05DC0000 0x00200000>;
++				read-only;
++			};
++
++			partition@5FC0000 {
++				label = "Storage";
++				reg = <0x05FC0000 0x00300000>;
++				read-only;
++			};
++		};
++	};
++};
++
++&spi0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&spic0_pins>;
++	status = "okay";
++};
++
++&spi1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&spic1_pins>;
++	status = "okay";
++};
++
++&ssusb {
++	status = "disabled";
++};
++
++&u3phy {
++	status = "disabled";
++};
++
++&uart0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart0_pins>;
++	status = "okay";
++};
++
++&uart2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart2_pins>;
++	status = "okay";
++};
++
++&watchdog {
++	pinctrl-names = "default";
++	pinctrl-0 = <&watchdog_pins>;
++	status = "okay";
++};
++
++&wmac {
++	mediatek,mtd-eeprom = <&factory 0x0000>;
++	status = "okay";
++};
++
++&wmac1 {
++	mediatek,mtd-eeprom = <&factory 0x05000>;
++};
+diff --git a/target/linux/mediatek/image/mt7622.mk b/target/linux/mediatek/image/mt7622.mk
+index 040ef957db..88b24ed4cb 100644
+--- a/target/linux/mediatek/image/mt7622.mk
++++ b/target/linux/mediatek/image/mt7622.mk
+@@ -131,6 +131,27 @@ define Device/buffalo_wsr-2533dhp2
+ endef
+ TARGET_DEVICES += buffalo_wsr-2533dhp2
+ 
++define Device/dlink_eagle-pro-ai-m32
++  IMAGE_SIZE := 46080k
++  DEVICE_VENDOR := D-Link
++  DEVICE_MODEL := EAGLE PRO AI M32
++  DEVICE_VARIANT := A1
++  DEVICE_DTS := mt7622-dlink-eagle-pro-ai-m32
++  DEVICE_DTS_DIR := ../dts
++  DEVICE_PACKAGES := kmod-mt7915-firmware
++  KERNEL_SIZE := 8192k
++  BLOCKSIZE := 128k
++  PAGESIZE := 2048
++  UBINIZE_OPTS := -E 5
++#  KERNEL_LOADADDR := 0x82000000
++#  KERNEL := kernel-bin | relocate-kernel 0x80001000 | lzma | \
++#	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
++  IMAGES += tftp.bin
++  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
++  IMAGE/tftp.bin := append-kernel | pad-to $$(KERNEL_SIZE) | append-ubi | check-size
++endef
++TARGET_DEVICES += dlink_eagle-pro-ai-m32
++
+ define Device/elecom_wrc-2533gent
+   DEVICE_VENDOR := Elecom
+   DEVICE_MODEL := WRC-2533GENT
+diff --git a/target/linux/mediatek/mt7622/base-files/etc/board.d/02_network b/target/linux/mediatek/mt7622/base-files/etc/board.d/02_network
+index 38db921f5c..015bd6bdd6 100644
+--- a/target/linux/mediatek/mt7622/base-files/etc/board.d/02_network
++++ b/target/linux/mediatek/mt7622/base-files/etc/board.d/02_network
+@@ -23,6 +23,9 @@ mediatek_setup_interfaces()
+ 		ucidef_add_switch "switch0" \
+ 			"0:lan" "1:lan" "2:lan" "3:lan" "4:wan" "6@eth0"
+ 		;;
++	dlink,eagle-pro-ai-m32)
++		ucidef_set_interfaces_lan_wan "lan1 lan2" wan
++		;;
+ 	ubnt,unifi-6-lr*)
+ 		ucidef_set_interface_lan "eth0"
+ 		;;
+@@ -55,6 +58,9 @@ mediatek_setup_macs()
+ 	local label_mac=""
+ 
+ 	case $board in
++	dlink,eagle-pro-ai-m32)
++		wan_mac=$(macaddr_add $(get_mac_label) 1)
++		;;
+ 	reyee,ax3200-e5|\
+ 	ruijie,rg-ew3200gx-pro)
+ 		lan_mac=$(macaddr_add $(get_mac_label) 1)
+diff --git a/target/linux/mediatek/mt7622/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac b/target/linux/mediatek/mt7622/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
+index f8639e9f40..3ee68e7b95 100644
+--- a/target/linux/mediatek/mt7622/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
++++ b/target/linux/mediatek/mt7622/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
+@@ -13,6 +13,10 @@ case "$board" in
+ 	bananapi,bpi-r64)
+ 		[ "$PHYNBR" = "0" ] && macaddr_add $(cat /sys/class/net/eth0/address) 2 > /sys${DEVPATH}/macaddress
+ 		;;
++	dlink,eagle-pro-ai-m32)
++		[ "$PHYNBR" = "0" ] && macaddr_add $(cat /sys/class/net/eth0/address) 2 > /sys${DEVPATH}/macaddress
++		[ "$PHYNBR" = "1" ] && macaddr_add $(cat /sys/class/net/eth0/address) 3 > /sys${DEVPATH}/macaddress
++        ;;
+ 	reyee,ax3200-e5|\
+ 	ruijie,rg-ew3200gx-pro)
+ 		[ "$PHYNBR" = "0" ] && macaddr_add $(get_mac_label) 3 > /sys${DEVPATH}/macaddress
+diff --git a/target/linux/mediatek/mt7622/base-files/lib/upgrade/platform.sh b/target/linux/mediatek/mt7622/base-files/lib/upgrade/platform.sh
+index b37b7b1c6e..9a7c75ef7c 100755
+--- a/target/linux/mediatek/mt7622/base-files/lib/upgrade/platform.sh
++++ b/target/linux/mediatek/mt7622/base-files/lib/upgrade/platform.sh
+@@ -33,6 +33,7 @@ platform_do_upgrade() {
+ 			nand_do_upgrade "$1"
+ 		fi
+ 		;;
++	dlink,eagle-pro-ai-m32|\
+ 	elecom,wrc-x3200gst3|\
+ 	mediatek,mt7622-rfb1-ubi|\
+ 	netgear,wax206|\
+@@ -70,6 +71,7 @@ platform_check_image() {
+ 	buffalo,wsr-2533dhp2)
+ 		buffalo_check_image "$board" "$magic" "$1" || return 1
+ 		;;
++  	dlink,eagle-pro-ai-m32|\
+ 	elecom,wrc-x3200gst3|\
+ 	mediatek,mt7622-rfb1-ubi|\
+ 	netgear,wax206|\
