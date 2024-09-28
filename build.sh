@@ -21,7 +21,7 @@ git push --force
 ./scripts/feeds install -a
 
 # Write changes to .config
-cp diffconfig .config
+cp ./../diffconfig .config
  
 # Expand to full config
 make defconfig
