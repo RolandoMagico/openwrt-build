@@ -23,10 +23,6 @@ git push --force
 # Write changes to .config
 cp ./../diffconfig .config
 
-# Enable build of all kernel modules
-sed -i -e '/^# CONFIG_PACKAGE_kmod-/d' .config
-echo CONFIG_ALL_KMODS=y >> .config
-
 # Expand to full config
 make defconfig
 
