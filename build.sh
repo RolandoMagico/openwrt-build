@@ -7,7 +7,6 @@ OPENWRT_BUILD_DIRECTORY=openwrt
 
 OPENWRT_UPSTREAM_REO=https://github.com/openwrt/openwrt.git
 OPENWRT_UPSTREAM_BRANCH=openwrt-23.05
-${OPENWRT_BUILD_DIRECTORY}
 
 # Remove build directory, if it exists
 if [ -d "$OPENWRT_BUILD_DIRECTORY" ]; then rm -Rf $OPENWRT_BUILD_DIRECTORY; fi
