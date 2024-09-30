@@ -1,10 +1,11 @@
 #!/bin/bash
 # Configuration section
-OPENWRT_TAG=v24.10.0
-DEVICE_PATCH=0001-ramips-Add-support-for-Cudy-M1300-v2.patch
-CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.0/targets/ramips/mt7621//config.buildinfo
-EXPECTED_VERMAGIC=6a9e125268c43e0bae8cecb014c8ab03
-ARTIFACTS=*M1300*
+OPENWRT_VERSION=24.10.3
+OPENWRT_TAG=v$OPENWRT_VERSION
+DEVICE_PATCH=0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
+CONFIG_BUILDINFO=https://downloads.openwrt.org/releases/$OPENWRT_VERSION/targets/ipq40xx/generic/config.buildinfo
+EXPECTED_VERMAGIC=eaef302ef5ab82928154706763925f63
+ARTIFACTS=*MR6350*
 
 # Create directory for storing the build result
 mkdir output
