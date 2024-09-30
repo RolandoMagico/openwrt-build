@@ -1,0 +1,291 @@
+From ded0b38f86461b20fd8f85fb113ee9edaa961b77 Mon Sep 17 00:00:00 2001
+From: Roland Reinl <reinlroland+github@gmail.com>
+Date: Tue, 15 Apr 2025 17:09:03 +0200
+Subject: [PATCH] ipq40xx: Add support for Linksys MR6350
+
+---
+ package/boot/uboot-envtools/files/ipq40xx     |   1 +
+ .../ipq40xx/base-files/etc/board.d/02_network |   2 +
+ .../etc/hotplug.d/firmware/11-ath10k-caldata  |   3 +
+ .../ipq40xx/base-files/etc/init.d/bootcount   |   1 +
+ .../etc/uci-defaults/05_fix-compat-version    |   1 +
+ .../lib/preinit/05_set_iface_mac_ipq40xx.sh   |   1 +
+ .../ipq40xx/base-files/lib/upgrade/linksys.sh |   2 +-
+ .../base-files/lib/upgrade/platform.sh        |   1 +
+ .../arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts | 114 ++++++++++++++++++
+ target/linux/ipq40xx/image/generic.mk         |  17 +++
+ 10 files changed, 142 insertions(+), 1 deletion(-)
+ create mode 100644 target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
+
+diff --git a/package/boot/uboot-envtools/files/ipq40xx b/package/boot/uboot-envtools/files/ipq40xx
+index 717158b042..ff2ad72949 100644
+--- a/package/boot/uboot-envtools/files/ipq40xx
++++ b/package/boot/uboot-envtools/files/ipq40xx
+@@ -61,6 +61,7 @@ linksys,ea6350v3)
+ 	ubootenv_add_uci_config "/dev/mtd7" "0x0" "0x20000" "0x20000"
+ 	;;
+ linksys,ea8300|\
++linksys,mr6350|\
+ linksys,mr8300)
+ 	ubootenv_add_uci_config "/dev/mtd7" "0x0" "0x40000" "0x20000"
+ 	;;
+diff --git a/target/linux/ipq40xx/base-files/etc/board.d/02_network b/target/linux/ipq40xx/base-files/etc/board.d/02_network
+index 549e1ac0c9..59abb5db29 100644
+--- a/target/linux/ipq40xx/base-files/etc/board.d/02_network
++++ b/target/linux/ipq40xx/base-files/etc/board.d/02_network
+@@ -17,6 +17,7 @@ ipq40xx_setup_interfaces()
+ 	asus,rt-ac58u|\
+ 	linksys,ea6350v3|\
+ 	linksys,ea8300|\
++	linksys,mr6350|\
+ 	linksys,mr8300|\
+ 	mikrotik,hap-ac2|\
+ 	mikrotik,hap-ac3|\
+@@ -214,6 +215,7 @@ ipq40xx_setup_macs()
+ 		;;
+ 	linksys,ea6350v3|\
+ 	linksys,ea8300  |\
++	linksys,mr6350|\
+ 	linksys,mr8300)
+ 		wan_mac=$(mtd_get_mac_ascii devinfo hw_mac_addr)
+ 		lan_mac=$(macaddr_add "$wan_mac" 1)
+diff --git a/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata b/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
+index 4a1a0ff311..74b336022e 100644
+--- a/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
++++ b/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
+@@ -35,6 +35,7 @@ case "$FIRMWARE" in
+ 		/usr/bin/fritz_cal_extract -i 1 -s 0x3C000 -e 0x212 -l 12064 -o /lib/firmware/$FIRMWARE $(find_mtd_chardev "urlader1")
+ 		;;
+ 	linksys,ea8300 |\
++	linksys,mr6350 |\
+ 	linksys,mr8300)
+ 		caldata_extract "ART" 0x9000 0x2f20
+ 		# OEM assigns 4 sequential MACs
+@@ -103,6 +104,7 @@ case "$FIRMWARE" in
+ 		ath10k_patch_mac $(mtd_get_mac_ascii CFG1 RADIOADDR0)
+ 		;;
+ 	linksys,ea8300 |\
++	linksys,mr6350 |\
+ 	linksys,mr8300)
+ 		caldata_extract "ART" 0x1000 0x2f20
+ 		ath10k_patch_mac $(macaddr_add "$(cat /sys/class/net/eth0/address)" 2)
+@@ -202,6 +204,7 @@ case "$FIRMWARE" in
+ 		ath10k_patch_mac $(mtd_get_mac_ascii CFG1 RADIOADDR1)
+ 		;;
+ 	linksys,ea8300 |\
++	linksys,mr6350 |\
+ 	linksys,mr8300)
+ 		caldata_extract "ART" 0x5000 0x2f20
+ 		ath10k_patch_mac $(macaddr_add "$(cat /sys/class/net/eth0/address)" 3)
+diff --git a/target/linux/ipq40xx/base-files/etc/init.d/bootcount b/target/linux/ipq40xx/base-files/etc/init.d/bootcount
+index 0120f78cfe..079edce24c 100755
+--- a/target/linux/ipq40xx/base-files/etc/init.d/bootcount
++++ b/target/linux/ipq40xx/base-files/etc/init.d/bootcount
+@@ -39,6 +39,7 @@ boot() {
+ 		;;
+ 	linksys,ea6350v3|\
+ 	linksys,ea8300|\
++	linksys,mr6350|\
+ 	linksys,mr8300|\
+ 	linksys,whw01|\
+ 	linksys,whw03v2)
+diff --git a/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version b/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version
+index c011920897..0f933b71cd 100644
+--- a/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version
++++ b/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version
+@@ -3,6 +3,7 @@
+ case "$(board_name)" in
+ linksys,ea6350v3|\
+ linksys,ea8300|\
++linksys,mr6350|\
+ linksys,mr8300|\
+ ezviz,cs-w3-wd1200g-eup)
+ 	uci set system.@system[0].compat_version="2.0"
+diff --git a/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh b/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh
+index 1ede544aac..afe607332a 100644
+--- a/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh
++++ b/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh
+@@ -25,6 +25,7 @@ preinit_set_mac_address() {
+ 		ip link set dev eth0 address $(mtd_get_mac_ascii CFG1 ethaddr)
+ 		;;
+ 	linksys,ea8300|\
++	linksys,mr6350|\
+ 	linksys,mr8300)
+ 		base_mac=$(mtd_get_mac_ascii devinfo hw_mac_addr)
+ 		ip link set dev lan1 address $(macaddr_add "$base_mac" 1)
+diff --git a/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh b/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh
+index 860c3fd2de..256b3cfb91 100644
+--- a/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh
++++ b/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh
+@@ -16,7 +16,7 @@ linksys_get_target_firmware() {
+ 			"${cur_boot_part}" "${mtd_ubi0}"
+ 	fi
+ 
+-	# OEM U-Boot for EA6350v3, EA8300 and MR8300; bootcmd=
++	# OEM U-Boot for EA6350v3, EA8300, MR6350 and MR8300; bootcmd=
+ 	#  if test $auto_recovery = no;
+ 	#      then bootipq;
+ 	#  elif test $boot_part = 1;
+diff --git a/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh b/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
+index 53a9561148..53e36a9def 100644
+--- a/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
++++ b/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
+@@ -170,6 +170,7 @@ platform_do_upgrade() {
+ 		;;
+ 	linksys,ea6350v3 |\
+ 	linksys,ea8300 |\
++	linksys,mr6350 |\
+ 	linksys,mr8300 |\
+ 	linksys,whw01 |\
+ 	linksys,whw03v2)
+diff --git a/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
+new file mode 100644
+index 0000000000..20785b730c
+--- /dev/null
++++ b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
+@@ -0,0 +1,114 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++
++#include "qcom-ipq4019-xx8300.dtsi"
++#include <dt-bindings/leds/common.h>
++
++/ {
++	model = "Linksys MR6350";
++	compatible = "linksys,mr6350", "qcom,ipq4019";
++
++	aliases {
++		led-boot = &led_blue;
++		led-failsafe = &led_red;
++		led-running = &led_green;
++		led-upgrade = &led_blue;
++		serial0 = &blsp1_uart1;
++	};
++
++	// Top panel LEDs, above Linksys logo
++	leds {
++		compatible = "gpio-leds";
++		
++		led_blue: led-blue {
++			color = <LED_COLOR_ID_BLUE>;
++			function = LED_FUNCTION_STATUS;
++			gpios = <&tlmm 46 GPIO_ACTIVE_LOW>;
++		};
++
++		led_red: led-red {
++			color = <LED_COLOR_ID_RED>;
++			function = LED_FUNCTION_STATUS;
++			gpios = <&tlmm 47 GPIO_ACTIVE_HIGH>;
++			panic-indicator;
++		};
++
++		led_green: led-green {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_STATUS;
++			gpios = <&tlmm 49 GPIO_ACTIVE_HIGH>;
++		};
++	};
++
++	keys {
++		compatible = "gpio-keys";
++
++		button-reset {
++			label = "reset";
++			linux,code = <KEY_RESTART>;
++			gpios = <&tlmm 50 GPIO_ACTIVE_LOW>;
++		};
++
++		button-wps {
++			label = "wps";
++			linux,code = <KEY_WPS_BUTTON>;
++			gpios = <&tlmm 18 GPIO_ACTIVE_LOW>;
++		};
++	};
++};
++
++&mdio {
++	status = "okay";
++	pinctrl-0 = <&mdio_pins>;
++	pinctrl-names = "default";
++	reset-gpios = <&tlmm 54 GPIO_ACTIVE_LOW>;
++	reset-delay-us = <2000>;
++	reset-post-delay-us = <5000>;
++};
++	
++&tlmm {
++	status = "okay";
++
++	mdio_pins: mdio_pinmux {
++		mdio {
++			pins = "gpio6";
++			function = "mdio";
++			bias-pull-up;
++		};
++
++		mdc {
++			pins = "gpio7";
++			function = "mdc";
++			bias-pull-up;
++		};
++	};
++};
++
++&wifi0 {
++	status = "okay";
++	qcom,ath10k-calibration-variant = "Linksys-MR6350";
++};
++
++&wifi1 {
++	status = "okay";
++	qcom,ath10k-calibration-variant = "Linksys-MR6350";
++};
++
++&swport1 {
++	label = "wan";
++};
++
++&swport2 {
++	label = "lan1";
++};
++
++&swport3 {
++	label = "lan2";
++};
++
++&swport4 {
++	label = "lan3";
++};
++
++&swport5 {
++	label = "lan4";
++};
+diff --git a/target/linux/ipq40xx/image/generic.mk b/target/linux/ipq40xx/image/generic.mk
+index 21841f4bf1..ca5cd2b850 100644
+--- a/target/linux/ipq40xx/image/generic.mk
++++ b/target/linux/ipq40xx/image/generic.mk
+@@ -713,6 +713,23 @@ define Device/linksys_ea8300
+ endef
+ TARGET_DEVICES += linksys_ea8300
+ 
++define Device/linksys_mr6350
++	$(call Device/FitzImage)
++	$(call Device/kernel-size-6350-8300)
++	DEVICE_VENDOR := Linksys
++	DEVICE_MODEL := MR6350
++	SOC := qcom-ipq4019
++	KERNEL_SIZE := 5120k
++	IMAGE_SIZE := 84992k
++	BLOCKSIZE := 128k
++	PAGESIZE := 2048
++	UBINIZE_OPTS := -E 5    # EOD marks to "hide" factory sig at EOF
++	IMAGES += factory.bin
++	IMAGE/factory.bin  := append-kernel | pad-to $$(KERNEL_SIZE) | append-ubi | linksys-image type=MR6350
++	DEVICE_PACKAGES := ath10k-firmware-qca9888-ct ipq-wifi-linksys_mr6350 kmod-usb-ledtrig-usbport
++endef
++TARGET_DEVICES += linksys_mr6350
++
+ define Device/linksys_mr8300
+ 	$(call Device/FitzImage)
+ 	$(call Device/kernel-size-6350-8300)
+-- 
+2.43.0
+
