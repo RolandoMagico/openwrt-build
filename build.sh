@@ -5,7 +5,7 @@ OPENWRT_BUILD_REPO=https://github.com/RolandoMagico/openwrt.git
 OPENWRT_BUILD_BRANCH=MR6350-openwrt-23.05
 OPENWRT_BUILD_DIRECTORY=openwrt
 
-OPENWRT_UPSTREAM_REO=https://github.com/openwrt/openwrt.git
+OPENWRT_UPSTREAM_REPO=https://github.com/openwrt/openwrt.git
 OPENWRT_UPSTREAM_BRANCH=openwrt-23.05
 
 # Remove build directory, if it exists
@@ -14,7 +14,7 @@ if [ -d "$OPENWRT_BUILD_DIRECTORY" ]; then rm -Rf $OPENWRT_BUILD_DIRECTORY; fi
 git clone ${OPENWRT_BUILD_REPO} -b ${OPENWRT_BUILD_BRANCH} ${OPENWRT_BUILD_DIRECTORY}
 
 cd ${OPENWRT_BUILD_DIRECTORY}
-git remote add upstream ${OPENWRT_UPSTREAM_REO}
+git remote add upstream ${OPENWRT_UPSTREAM_REPO}
 git fetch upstream
 
 git rebase upstream/${OPENWRT_UPSTREAM_BRANCH}
