@@ -2,11 +2,11 @@
 set -e
 
 OPENWRT_BUILD_REPO=https://github.com/RolandoMagico/openwrt.git
-OPENWRT_BUILD_BRANCH=MR6350-openwrt-23.05
+OPENWRT_BUILD_BRANCH=DecoM5
 OPENWRT_BUILD_DIRECTORY=openwrt
 
 OPENWRT_UPSTREAM_REPO=https://github.com/openwrt/openwrt.git
-OPENWRT_UPSTREAM_BRANCH=openwrt-23.05
+OPENWRT_UPSTREAM_BRANCH=main
 
 # Remove build directory, if it exists
 if [ -d "$OPENWRT_BUILD_DIRECTORY" ]; then rm -Rf $OPENWRT_BUILD_DIRECTORY; fi
