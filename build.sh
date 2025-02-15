@@ -1,35 +1,23 @@
 #!/bin/bash
-set -e
 
-OPENWRT_BUILD_REPO=https://github.com/RolandoMagico/openwrt.git
-OPENWRT_BUILD_BRANCH=MR6350-MR
-OPENWRT_BUILD_DIRECTORY=openwrt
+# The following steps are based on the following information
+# - https://hamy.io/post/0015/how-to-compile-openwrt-and-still-use-the-official-repository/
+# - https://forum.openwrt.org/t/from-snapshot-to-stable-release-22-03/136038/18?u=rolandomagico
 
-OPENWRT_UPSTREAM_REPO=https://github.com/openwrt/openwrt.git
-OPENWRT_UPSTREAM_BRANCH=main
+git clone https://github.com/openwrt/openwrt.git -b v24.10.0 openwrt-v24.10.0
+cd openwrt-v24.10.0/
 
-# Remove build directory, if it exists
-if [ -d "$OPENWRT_BUILD_DIRECTORY" ]; then rm -Rf $OPENWRT_BUILD_DIRECTORY; fi
+git am < ../0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
 
-git clone ${OPENWRT_BUILD_REPO} -b ${OPENWRT_BUILD_BRANCH} ${OPENWRT_BUILD_DIRECTORY}
+wget -O .config https://downloads.openwrt.org/releases/24.10.0/targets/ipq40xx/generic/config.buildinfo
 
-cd ${OPENWRT_BUILD_DIRECTORY}
-git remote add upstream ${OPENWRT_UPSTREAM_REPO}
-git fetch upstream
-
-git rebase upstream/${OPENWRT_UPSTREAM_BRANCH}
-git push --force
-
-./scripts/feeds update -a
-./scripts/feeds install -a
-
-# Write changes to .config
-cp ./../diffconfig .config
- 
-# Expand to full config
 make defconfig
 
-# Number of jobs used for make: Use number of processors
-OPENWRT_BUILD_JOB_COUNT=$(cat /proc/cpuinfo | grep processor | wc -l)
+# The following command will probably fail, can be ignored. vermagic should be present afterwards anyway
+make target/linux/{clean,compile}
 
-make -j${OPENWRT_BUILD_JOB_COUNT}
+# The following command should print the vermagic "60aeaf7e722ca0f86e06f61157755da3"
+find build_dir/ -name .vermagic -exec cat {} \;
+
+make download
+make -j24
