@@ -9,6 +9,8 @@ cd openwrt-v24.10.0/
 
 git am < ../0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
 
+./scripts/feeds update -a && ./scripts/feeds install -a
+
 wget -O .config https://downloads.openwrt.org/releases/24.10.0/targets/ipq40xx/generic/config.buildinfo
 
 make defconfig
@@ -18,6 +20,7 @@ make target/linux/{clean,compile}
 
 # The following command should print the vermagic "60aeaf7e722ca0f86e06f61157755da3"
 find build_dir/ -name .vermagic -exec cat {} \;
+read -p "Press enter to continue"
 
 make download
 make -j24
