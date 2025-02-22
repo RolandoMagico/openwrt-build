@@ -2,7 +2,7 @@
 set -e
 
 OPENWRT_BUILD_REPO=https://github.com/RolandoMagico/openwrt.git
-OPENWRT_BUILD_BRANCH=E30
+OPENWRT_BUILD_BRANCH=M1300
 OPENWRT_BUILD_DIRECTORY=openwrt
 
 OPENWRT_UPSTREAM_REPO=https://github.com/openwrt/openwrt.git
@@ -18,7 +18,7 @@ git remote add upstream ${OPENWRT_UPSTREAM_REPO}
 git fetch upstream
 
 git rebase upstream/${OPENWRT_UPSTREAM_BRANCH}
-git push --force
+# git push --force
 
 ./scripts/feeds update -a
 ./scripts/feeds install -a
