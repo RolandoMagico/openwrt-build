@@ -18,7 +18,7 @@ make defconfig
 # The following command will probably fail, can be ignored. vermagic should be present afterwards anyway
 make target/linux/{clean,compile}
 
-# The following command should print the vermagic "60aeaf7e722ca0f86e06f61157755da3"
+# The following command should print the vermagic "8f9ae65a21e1c33e542689b57c4d70f0"
 find build_dir/ -name .vermagic -exec cat {} \;
 read -p "Press enter to continue"
 
