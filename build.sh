@@ -7,18 +7,18 @@
 git clone https://github.com/openwrt/openwrt.git -b v24.10.0 openwrt-v24.10.0
 cd openwrt-v24.10.0/
 
-git am < ../0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
+git am < ../0001-ramips-Add-support-for-Cudy-M1300-v2.patch
 
 ./scripts/feeds update -a && ./scripts/feeds install -a
 
-wget -O .config https://downloads.openwrt.org/releases/24.10.0/targets/ipq40xx/generic/config.buildinfo
+wget -O .config https://mirror-03.infra.openwrt.org/releases/24.10.0/targets/ramips/mt7621//config.buildinfo
 
 make defconfig
 
 # The following command will probably fail, can be ignored. vermagic should be present afterwards anyway
 make target/linux/{clean,compile}
 
-# The following command should print the vermagic "60aeaf7e722ca0f86e06f61157755da3"
+# The following command should print the vermagic "3abe85def815b59c6c75ac1f92135cb6"
 find build_dir/ -name .vermagic -exec cat {} \;
 read -p "Press enter to continue"
 
