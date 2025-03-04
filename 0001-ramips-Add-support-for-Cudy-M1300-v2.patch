@@ -1,0 +1,258 @@
+From 2c137e31ff8573e100b08e392c29fa05e75d8099 Mon Sep 17 00:00:00 2001
+From: Roland Reinl <reinlroland+github@gmail.com>
+Date: Tue, 4 Mar 2025 18:50:14 +0100
+Subject: [PATCH] ramips: Add support for Cudy M1300 v2
+
+---
+ .../linux/ramips/dts/mt7621_cudy_m1300-v2.dts | 201 ++++++++++++++++++
+ target/linux/ramips/image/mt7621.mk           |  13 ++
+ .../mt7621/base-files/etc/board.d/02_network  |   1 +
+ 3 files changed, 215 insertions(+)
+ create mode 100644 target/linux/ramips/dts/mt7621_cudy_m1300-v2.dts
+
+diff --git a/target/linux/ramips/dts/mt7621_cudy_m1300-v2.dts b/target/linux/ramips/dts/mt7621_cudy_m1300-v2.dts
+new file mode 100644
+index 0000000000..f988b3375b
+--- /dev/null
++++ b/target/linux/ramips/dts/mt7621_cudy_m1300-v2.dts
+@@ -0,0 +1,201 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++
++#include "mt7621.dtsi"
++
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/leds/common.h>
++#include <dt-bindings/gpio/gpio.h>
++
++/ {
++	compatible = "cudy,m1300-v2", "mediatek,mt7621-soc";
++	model = "Cudy M1300 v2";
++};
++
++/ {
++	aliases {
++		led-boot = &led_status_white;
++		led-failsafe = &led_status_red;
++		led-running = &led_status_white;
++		led-upgrade = &led_status_red;
++		label-mac-device = &gmac0;
++	};
++
++	chosen {
++		bootargs = "console=ttyS0,115200";
++	};
++
++	keys {
++		compatible = "gpio-keys";
++
++		reset {
++			label = "reset";
++			gpios = <&gpio 8 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_RESTART>;
++		};
++
++		wps {
++			label = "wps";
++			gpios = <&gpio 10 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_WPS_BUTTON>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		led_status_red: led-status-red {
++			color = <LED_COLOR_ID_RED>;
++			function = LED_FUNCTION_STATUS;
++			gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
++		};
++
++		led_status_white: led-status-white {
++			color = <LED_COLOR_ID_WHITE>;
++			function = LED_FUNCTION_STATUS;
++			gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
++		};
++	};
++};
++
++&spi0 {
++	status = "okay";
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <10000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "u-boot";
++				reg = <0x0 0x30000>;
++				read-only;
++			};
++
++			partition@30000 {
++				label = "u-boot-env";
++				reg = <0x30000 0x10000>;
++				read-only;
++			};
++
++			partition@40000 {
++				label = "factory";
++				reg = <0x40000 0x10000>;
++				read-only;
++
++				nvmem-layout {
++					compatible = "fixed-layout";
++					#address-cells = <1>;
++					#size-cells = <1>;
++
++					eeprom_factory_0: eeprom@0 {
++						reg = <0x0 0x400>;
++					};
++
++					eeprom_factory_8000: eeprom@8000 {
++						reg = <0x8000 0x4da8>;
++					};
++				};
++			};
++
++			partition@50000 {
++				compatible = "denx,uimage";
++				label = "firmware";
++				reg = <0x50000 0xf80000>;
++			};
++
++			partition@fd0000 {
++				label = "debug";
++				reg = <0xfd0000 0x10000>;
++				read-only;
++			};
++
++			partition@fe0000 {
++				label = "backup";
++				reg = <0xfe0000 0x10000>;
++				read-only;
++			};
++
++			partition@ff0000 {
++				label = "bdinfo";
++				reg = <0xff0000 0x10000>;
++				read-only;
++
++				nvmem-layout {
++					compatible = "fixed-layout";
++					#address-cells = <1>;
++					#size-cells = <1>;
++
++					macaddr_bdinfo_de00: macaddr@de00 {
++						compatible = "mac-base";
++						reg = <0xde00 0x6>;
++						#nvmem-cell-cells = <1>;
++					};
++				};
++			};
++		};
++	};
++};
++
++&pcie {
++	status = "okay";
++};
++
++&pcie0 {
++       wifi@0,0 {
++               compatible = "mediatek,mt76";
++               reg = <0x0000 0 0 0 0>;
++               nvmem-cells = <&eeprom_factory_0>, <&macaddr_bdinfo_de00 0>;
++               nvmem-cell-names = "eeprom", "mac-address";
++               ieee80211-freq-limit = <2400000 2500000>;
++       };
++};
++
++&pcie1 {
++       wifi@0,0 {
++               compatible = "mediatek,mt76";
++               reg = <0x0000 0 0 0 0>;
++               nvmem-cells = <&eeprom_factory_8000>, <&macaddr_bdinfo_de00 2>;
++               nvmem-cell-names = "eeprom", "mac-address";
++               ieee80211-freq-limit = <5000000 6000000>;
++       };
++};
++
++
++&gmac0 {
++	nvmem-cells = <&macaddr_bdinfo_de00 0>;
++	nvmem-cell-names = "mac-address";
++};
++
++&gmac1 {
++	status = "okay";
++	label = "wan";
++	phy-handle = <&ethphy4>;
++
++	nvmem-cells = <&macaddr_bdinfo_de00 2>;
++	nvmem-cell-names = "mac-address";
++};
++
++&ethphy4 {
++	/delete-property/ interrupts;
++};
++
++&switch0 {
++	ports {
++		port@3 {
++			status = "okay";
++			label = "lan";
++		};
++	};
++};
++
++&state_default {
++	gpio {
++		groups = "wdt", "jtag";
++		function = "gpio";
++	};
++};
+diff --git a/target/linux/ramips/image/mt7621.mk b/target/linux/ramips/image/mt7621.mk
+index 68fc03d998..6fd610472c 100644
+--- a/target/linux/ramips/image/mt7621.mk
++++ b/target/linux/ramips/image/mt7621.mk
+@@ -685,6 +685,19 @@ define Device/confiabits_mt7621-v1
+ endef
+ TARGET_DEVICES += confiabits_mt7621-v1
+ 
++define Device/cudy_m1300-v2
++  $(Device/dsa-migration)
++  IMAGE_SIZE := 15872k
++  DEVICE_VENDOR := Cudy
++  DEVICE_MODEL := M1300
++  DEVICE_VARIANT := v2
++  DEVICE_PACKAGES := kmod-mt7603 kmod-mt7615e kmod-mt7663-firmware-ap \
++	-uboot-envtools
++  UIMAGE_NAME := R15
++  SUPPORTED_DEVICES += cudy,m1300 R15
++endef
++TARGET_DEVICES += cudy_m1300-v2
++
+ define Device/cudy_m1800
+   $(Device/dsa-migration)
+   DEVICE_VENDOR := Cudy
+diff --git a/target/linux/ramips/mt7621/base-files/etc/board.d/02_network b/target/linux/ramips/mt7621/base-files/etc/board.d/02_network
+index f40e9616d0..5beb15b74c 100644
+--- a/target/linux/ramips/mt7621/base-files/etc/board.d/02_network
++++ b/target/linux/ramips/mt7621/base-files/etc/board.d/02_network
+@@ -68,6 +68,7 @@ ramips_setup_interfaces()
+ 		ucidef_set_interface_lan "lan"
+ 		;;
+ 	asiarf,ap7621-001|\
++	cudy,m1300-v2|\
+ 	dna,valokuitu-plus-ex400|\
+ 	humax,e10|\
+ 	keenetic,kn-3510|\
+-- 
+2.43.0
+
