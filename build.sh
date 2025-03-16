@@ -3,6 +3,10 @@
 OPENWRT_TAG=v24.10.0
 DEVICE_PATCH=0001-ramips-Add-support-for-Cudy-M1300-v2.patch
 CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.0/targets/ramips/mt7621//config.buildinfo
+ARTIFACTS=*M1300*
+
+# Create directory for storing the build result
+mkdir output
 
 # The following steps are based on the following information
 # - https://hamy.io/post/0015/how-to-compile-openwrt-and-still-use-the-official-repository/
@@ -28,3 +32,5 @@ read -p "Press enter to continue"
 
 make download
 make -j
+
+cp bin/*/*/$ARTIFACTS ../output
