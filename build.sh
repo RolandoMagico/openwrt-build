@@ -1,35 +1,30 @@
 #!/bin/bash
-set -e
+# Configuration section
+OPENWRT_TAG=v24.10.0
+DEVICE_PATCH=0001-ramips-Add-support-for-Cudy-M1300-v2.patch
+CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.0/targets/ramips/mt7621//config.buildinfo
 
-OPENWRT_BUILD_REPO=https://github.com/RolandoMagico/openwrt.git
-OPENWRT_BUILD_BRANCH=MR6350-openwrt-23.05
-OPENWRT_BUILD_DIRECTORY=openwrt
+# The following steps are based on the following information
+# - https://hamy.io/post/0015/how-to-compile-openwrt-and-still-use-the-official-repository/
+# - https://forum.openwrt.org/t/from-snapshot-to-stable-release-22-03/136038/18?u=rolandomagico
 
-OPENWRT_UPSTREAM_REPO=https://github.com/openwrt/openwrt.git
-OPENWRT_UPSTREAM_BRANCH=openwrt-23.05
+git clone https://github.com/openwrt/openwrt.git -b $OPENWRT_TAG
+cd openwrt/
 
-# Remove build directory, if it exists
-if [ -d "$OPENWRT_BUILD_DIRECTORY" ]; then rm -Rf $OPENWRT_BUILD_DIRECTORY; fi
+git am < ../$DEVICE_PATCH
 
-git clone ${OPENWRT_BUILD_REPO} -b ${OPENWRT_BUILD_BRANCH} ${OPENWRT_BUILD_DIRECTORY}
+./scripts/feeds update -a && ./scripts/feeds install -a
 
-cd ${OPENWRT_BUILD_DIRECTORY}
-git remote add upstream ${OPENWRT_UPSTREAM_REPO}
-git fetch upstream
+wget -O .config $CONFIG_BUILDINFO
 
-git rebase upstream/${OPENWRT_UPSTREAM_BRANCH}
-git push --force
-
-./scripts/feeds update -a
-./scripts/feeds install -a
-
-# Write changes to .config
-cp ./../diffconfig .config
- 
-# Expand to full config
 make defconfig
 
-# Number of jobs used for make: Use number of processors
-OPENWRT_BUILD_JOB_COUNT=$(cat /proc/cpuinfo | grep processor | wc -l)
+# The following command will probably fail, can be ignored. vermagic should be present afterwards anyway
+make target/linux/{clean,compile}
 
-make -j${OPENWRT_BUILD_JOB_COUNT}
+# The following command should print the vermagic "3abe85def815b59c6c75ac1f92135cb6"
+find build_dir/ -name .vermagic -exec cat {} \;
+read -p "Press enter to continue"
+
+make download
+make -j
