@@ -11,3 +11,8 @@ jobs:
         ref: ${{ github.ref }}
     - name: Build
       run: ./build.sh
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: openwrt-build-output
+        path: output
