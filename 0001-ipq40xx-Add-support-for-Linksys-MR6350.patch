@@ -1,6 +1,6 @@
-From bc154ecca256c4be1b71065b44bd779e1fcbd108 Mon Sep 17 00:00:00 2001
+From ded0b38f86461b20fd8f85fb113ee9edaa961b77 Mon Sep 17 00:00:00 2001
 From: Roland Reinl <reinlroland+github@gmail.com>
-Date: Sat, 15 Feb 2025 10:27:15 +0100
+Date: Tue, 15 Apr 2025 17:09:03 +0200
 Subject: [PATCH] ipq40xx: Add support for Linksys MR6350
 
 ---
@@ -12,9 +12,9 @@ Subject: [PATCH] ipq40xx: Add support for Linksys MR6350
  .../lib/preinit/05_set_iface_mac_ipq40xx.sh   |   1 +
  .../ipq40xx/base-files/lib/upgrade/linksys.sh |   2 +-
  .../base-files/lib/upgrade/platform.sh        |   1 +
- .../arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts | 112 ++++++++++++++++++
+ .../arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts | 114 ++++++++++++++++++
  target/linux/ipq40xx/image/generic.mk         |  17 +++
- 10 files changed, 140 insertions(+), 1 deletion(-)
+ 10 files changed, 142 insertions(+), 1 deletion(-)
  create mode 100644 target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
 
 diff --git a/package/boot/uboot-envtools/files/ipq40xx b/package/boot/uboot-envtools/files/ipq40xx
@@ -140,10 +140,10 @@ index 53a9561148..53e36a9def 100644
  	linksys,whw03v2)
 diff --git a/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
 new file mode 100644
-index 0000000000..a5695965bf
+index 0000000000..20785b730c
 --- /dev/null
 +++ b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
-@@ -0,0 +1,112 @@
+@@ -0,0 +1,114 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 +
 +#include "qcom-ipq4019-xx8300.dtsi"
@@ -213,13 +213,15 @@ index 0000000000..a5695965bf
 +	
 +&tlmm {
 +	status = "okay";
++
 +	mdio_pins: mdio_pinmux {
-+		mux_1 {
++		mdio {
 +			pins = "gpio6";
 +			function = "mdio";
 +			bias-pull-up;
 +		};
-+		mux_2 {
++
++		mdc {
 +			pins = "gpio7";
 +			function = "mdc";
 +			bias-pull-up;
@@ -229,12 +231,12 @@ index 0000000000..a5695965bf
 +
 +&wifi0 {
 +	status = "okay";
-+	qcom,ath10k-calibration-variant = "linksys-mr6350-fcc";
++	qcom,ath10k-calibration-variant = "Linksys-MR6350";
 +};
 +
 +&wifi1 {
 +	status = "okay";
-+	qcom,ath10k-calibration-variant = "linksys-mr6350-fcc";
++	qcom,ath10k-calibration-variant = "Linksys-MR6350";
 +};
 +
 +&swport1 {
