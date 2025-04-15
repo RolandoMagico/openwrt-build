@@ -3,7 +3,6 @@
 OPENWRT_TAG=v24.10.1
 DEVICE_PATCH=0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
 CONFIG_BUILDINFO=https://downloads.openwrt.org/releases/24.10.1/targets/ipq40xx/generic/config.buildinfo
-ARTIFACTS=*MR6350*
 
 # Create directory for storing the build result
 mkdir output
@@ -33,4 +32,7 @@ read -p "Press enter to continue"
 make download
 make -j$(nproc)
 
-cp bin/*/*/$ARTIFACTS ../output
+find bin/ -iname "*MR6350*" -exec cp '{}' ../output/ \;
+find bin/ -iname "*.buildinfo" -exec cp '{}' ../output/ \;
+find bin/ -iname "profiles.json" -exec cp '{}' ../output/ \;
+find bin/ -iname "sha256sums" -exec cp '{}' ../output/ \;
