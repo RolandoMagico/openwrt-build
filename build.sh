@@ -4,8 +4,8 @@
 # - https://hamy.io/post/0015/how-to-compile-openwrt-and-still-use-the-official-repository/
 # - https://forum.openwrt.org/t/from-snapshot-to-stable-release-22-03/136038/18?u=rolandomagico
 
-git clone https://github.com/openwrt/openwrt.git -b v24.10.0 openwrt-v24.10.0
-cd openwrt-v24.10.0/
+git clone https://github.com/openwrt/openwrt.git -b v24.10.0 openwrt-v24.10.1
+cd openwrt-v24.10.1/
 
 git am < ../0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
 
