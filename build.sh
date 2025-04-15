@@ -11,14 +11,14 @@ git am < ../0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
 
 ./scripts/feeds update -a && ./scripts/feeds install -a
 
-wget -O .config https://downloads.openwrt.org/releases/24.10.0/targets/ipq40xx/generic/config.buildinfo
+wget -O .config https://downloads.openwrt.org/releases/24.10.1/targets/ipq40xx/generic/config.buildinfo
 
 make defconfig
 
 # The following command will probably fail, can be ignored. vermagic should be present afterwards anyway
 make target/linux/{clean,compile}
 
-# The following command should print the vermagic "60aeaf7e722ca0f86e06f61157755da3"
+# The following command should print the vermagic "86a3ff6dadb6f11ea15032190af7b3de"
 find build_dir/ -name .vermagic -exec cat {} \;
 read -p "Press enter to continue"
 
