@@ -1,0 +1,40 @@
+From 8e2d04247ded60a2320b45808e76f26ddbe837fe Mon Sep 17 00:00:00 2001
+From: Juan Pedro Paredes Caballero <juanpedro.paredes@gmail.com>
+Date: Sun, 26 Jan 2025 20:23:09 +0100
+Subject: [PATCH 3/4] mediatek: filogic: fix 2.5G phy compatible for WR3000H
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Following the initial support of the Cudy WR3000H with PHY C22 for the 2.5G WAN
+interface, several improvements fixing issues with RealTek RTL8221B PHYs have
+been merged.
+Therefore we can now bring the DT in line with other equipment and declare the
+2.5G WAN PHY as C45.
+
+Fixes: 9d66b8b ("mediatek: filogic: Add support for cudy wr3000h")
+Signed-off-by: Juan Pedro Paredes Caballero <juanpedro.paredes@gmail.com>
+Link: https://github.com/openwrt/openwrt/pull/17739
+[reword commit description]
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+(cherry picked from commit dcc5587374ace475cc2f2a94afd1c51e10946c3d)
+---
+ target/linux/mediatek/dts/mt7981b-cudy-wr3000h-v1.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/target/linux/mediatek/dts/mt7981b-cudy-wr3000h-v1.dts b/target/linux/mediatek/dts/mt7981b-cudy-wr3000h-v1.dts
+index 0808eb9557..bdcc4f78ea 100644
+--- a/target/linux/mediatek/dts/mt7981b-cudy-wr3000h-v1.dts
++++ b/target/linux/mediatek/dts/mt7981b-cudy-wr3000h-v1.dts
+@@ -174,7 +174,7 @@
+ 		interrupts = <38 IRQ_TYPE_LEVEL_HIGH>;
+ 	};
+ 	phy6: ethernet-phy@6 {
+-		compatible = "ethernet-phy-ieee802.3-c22"; // [RTL8221B-VB-CG 2.5Gbps PHY (C22)]
++		compatible = "ethernet-phy-ieee802.3-c45";
+ 		reg = <6>;
+ 		phy-mode = "2500base-x";
+ 	};
+-- 
+2.43.0
+
