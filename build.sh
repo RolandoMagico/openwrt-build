@@ -32,6 +32,6 @@ find build_dir/ -name .vermagic -exec cat {} \;
 read -p "Press enter to continue"
 
 make download
-make -j
+make -j$(nproc)
 
 cp bin/*/*/$ARTIFACTS ../output
