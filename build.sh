@@ -3,6 +3,7 @@
 OPENWRT_TAG=v24.10.0
 DEVICE_PATCH=0001-ramips-Add-support-for-Cudy-M1300-v2.patch
 CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.0/targets/ramips/mt7621//config.buildinfo
+EXPECTED_VERMAGIC=6a9e125268c43e0bae8cecb014c8ab03
 ARTIFACTS=*M1300*
 
 # Create directory for storing the build result
@@ -27,8 +28,13 @@ make defconfig
 make target/linux/{clean,compile}
 
 # The following command should print the vermagic "3abe85def815b59c6c75ac1f92135cb6"
-find build_dir/ -name .vermagic -exec cat {} \;
-read -p "Press enter to continue"
+CURRENT_VERMAGIC=$(find build_dir/ -name .vermagic -exec cat {} \;)
+if [ "$CURRENT_VERMAGIC" == "$EXPECTED_VERMAGIC" ]; then
+    echo "Found expected vermagic $EXPECTED_VERMAGIC"
+else
+    echo "Current vermagic $CURRENT_VERMAGIC differs from expected vermagic $EXPECTED_VERMAGIC"
+    exit 1
+fi
 
 make download
 make -j$(nproc)
