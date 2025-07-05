@@ -1,0 +1,829 @@
+From 4f7bd84db4a3fc54239cb2402d8ba728d60371d4 Mon Sep 17 00:00:00 2001
+From: Mateusz Krzak <kszaquitto+github@gmail.com>
+Date: Thu, 22 May 2025 18:39:06 +0200
+Subject: [PATCH 2/2] mediatek: filogic: D-Link M30: add OpenWrt partition
+ layout
+
+This commit adds OpenWrt partition layout support for D-Link
+Aquila M30 A1. The aim is to concatenate ubi and ubi1 for
+additional 50MB space for user data.
+
+Suffix 'ubootmod' is added because it is not possible to
+directly sysupgrade to this version. Stock version is kept for
+people who want to keep stock 50/50 layout.
+
+Recovery image is built with iniramfs, so that OpenWRT can
+boot even if current partition layout is different. Then,
+on sysupgrade partition layout is updated in u-boot-env
+and system can boot normally.
+
+Setting mupgrade_en to 0 is required to avoid u-boot running
+'aup' command (Auto Upgrade?), because it restores stock
+partition layout.
+
+Install:
+--------
+From any firmware (OEM or OpenWrt):
+ - Set your IP address to 192.168.200.2, subnetmask 255.255.255.0
+ - Press the reset button while powering on the device
+ - Keep the reset button pressed until the LED blinks red
+ - Open a Chromium based and goto http://192.168.200.1 (recovery web interface)
+ - Download openwrt-mediatek-filogic-dlink_aquila-pro-ai-m30-a1-ubootmod-squashfs-recovery.bin
+ - The recovery web interface always reports successful flashing, even if it fails
+ - After flashing, the recovery web interface will try to forward the browser to 192.168.0.1 (can be ignored)
+ - OpenWrt initramfs should start - the LED will blink white and stay white at the end
+ - Perform a sysupgrade using openwrt-mediatek-filogic-dlink_aquila-pro-ai-m30-a1-ubootmod-squashfs-sysupgrade.bin
+
+Return to stock:
+----------------
+
+1. Prepare DECRYPTED OEM firmware.
+
+2. Start OpenWRT and run:
+```
+fw_setenv sw_tryactive 0
+fw_setenv boot_by_tryactive "env default -a; saveenv; aup; reset"
+```
+
+3. After a reboot, router will boot into OEM recovery,
+   where you can flash a DECRYPTED OEM image.
+
+Signed-off-by: Mateusz Krzak <kszaquitto+github@gmail.com>
+---
+ .../uboot-envtools/files/mediatek_filogic     |   1 +
+ ...1b-dlink-aquila-pro-ai-m30-a1-ubootmod.dts |  22 ++
+ .../mt7981b-dlink-aquila-pro-ai-m30-a1.dts    | 305 +-----------------
+ .../mt7981b-dlink-aquila-pro-ai-m30-a1.dtsi   | 295 +++++++++++++++++
+ .../filogic/base-files/etc/board.d/02_network |   1 +
+ .../etc/hotplug.d/ieee80211/11_fix_wifi_mac   |   3 +-
+ .../base-files/lib/upgrade/platform.sh        |  18 ++
+ target/linux/mediatek/image/filogic.mk        |  18 ++
+ 8 files changed, 366 insertions(+), 297 deletions(-)
+ create mode 100644 target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod.dts
+ create mode 100644 target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dtsi
+
+diff --git a/package/boot/uboot-envtools/files/mediatek_filogic b/package/boot/uboot-envtools/files/mediatek_filogic
+index 7ec1a101a0..aeadb4fde2 100644
+--- a/package/boot/uboot-envtools/files/mediatek_filogic
++++ b/package/boot/uboot-envtools/files/mediatek_filogic
+@@ -99,6 +99,7 @@ zbtlink,zbt-z8103ax)
+ 	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0x20000" "0x20000"
+ 	;;
+ dlink,aquila-pro-ai-m30-a1|\
++dlink,aquila-pro-ai-m30-a1-ubootmod|\
+ dlink,aquila-pro-ai-m60-a1)
+ 	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0x40000" "0x40000"
+ 	;;
+diff --git a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod.dts b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod.dts
+new file mode 100644
+index 0000000000..063ba65f97
+--- /dev/null
++++ b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod.dts
+@@ -0,0 +1,22 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++
++/dts-v1/;
++
++#include "mt7981b-dlink-aquila-pro-ai-m30-a1.dtsi"
++
++/ {
++	model = "D-Link AQUILA PRO AI M30 A1 (OpenWrt partition layout)";
++	compatible = "dlink,aquila-pro-ai-m30-a1-ubootmod", "mediatek,mt7981";
++};
++
++&partitions {
++	/* ubi is the result of squashing
++	 * consecutive stock partitions:
++	 * - ubi
++	 * - ubi1
++	 */
++	partition@580000 {
++		label = "ubi";
++		reg = <0x580000 0x6400000>;
++	};
++};
+diff --git a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
+index dc14fce2b6..9d88d790de 100644
+--- a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
++++ b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dts
+@@ -2,309 +2,22 @@
+ 
+ /dts-v1/;
+ 
+-#include "mt7981.dtsi"
++#include "mt7981b-dlink-aquila-pro-ai-m30-a1.dtsi"
+ 
+ / {
+ 	model = "D-Link AQUILA PRO AI M30 A1";
+ 	compatible = "dlink,aquila-pro-ai-m30-a1", "mediatek,mt7981";
+-
+-	aliases {
+-		label-mac-device = &gmac0;
+-		led-boot = &led_status_white;
+-		led-failsafe = &led_status_red;
+-		led-running = &led_status_white;
+-		led-upgrade = &led_status_blue;
+-		serial0 = &uart0;
+-	};
+-
+-	chosen {
+-		stdout-path = "serial0:115200n8";
+-	};
+-
+-	gpio-keys {
+-		compatible = "gpio-keys";
+-
+-		button-reset {
+-			label = "reset";
+-			linux,code = <KEY_RESTART>;
+-			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
+-		};
+-
+-		button-wps {
+-			label = "wps";
+-			linux,code = <KEY_WPS_BUTTON>;
+-			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
+-		};
+-
+-		button-leds-on-off {
+-			label = "leds-on-off";
+-			linux,code = <KEY_LIGHTS_TOGGLE>;
+-			gpios = <&pio 4 GPIO_ACTIVE_LOW>;
+-		};
+-	};
+-};
+-
+-&uart0 {
+-	status = "okay";
+-};
+-
+-&watchdog {
+-	status = "okay";
+-};
+-
+-&eth {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&mdio_pins>;
+-
+-	status = "okay";
+-
+-	gmac0: mac@0 {
+-		compatible = "mediatek,eth-mac";
+-		reg = <0>;
+-		phy-mode = "2500base-x";
+-
+-		nvmem-cells = <&macaddr_odm 1>;
+-		nvmem-cell-names = "mac-address";
+-
+-		fixed-link {
+-			speed = <2500>;
+-			full-duplex;
+-			pause;
+-		};
+-	};
+-
+-	gmac1: mac@1 {
+-		compatible = "mediatek,eth-mac";
+-		reg = <1>;
+-		phy-mode = "gmii";
+-		phy-handle = <&int_gbe_phy>;
+-		label = "internet";
+-
+-		nvmem-cells = <&macaddr_odm 0>;
+-		nvmem-cell-names = "mac-address";
+-	};
+ };
+ 
+-&mdio_bus {
+-	switch: switch@1f {
+-		compatible = "mediatek,mt7531";
+-		reg = <31>;
+-		reset-gpios = <&pio 39 GPIO_ACTIVE_HIGH>;
+-
+-		ports {
+-			#address-cells = <1>;
+-			#size-cells = <0>;
+-
+-			port@0 {
+-				reg = <0>;
+-				label = "lan1";
+-			};
+-
+-			port@1 {
+-				reg = <1>;
+-				label = "lan2";
+-			};
+-
+-			port@2 {
+-				reg = <2>;
+-				label = "lan3";
+-			};
+-
+-			port@3 {
+-				reg = <3>;
+-				label = "lan4";
+-			};
+-
+-			port@6 {
+-				reg = <6>;
+-				label = "cpu";
+-				ethernet = <&gmac0>;
+-				phy-mode = "2500base-x";
+-
+-				fixed-link {
+-					speed = <2500>;
+-					full-duplex;
+-					pause;
+-				};
+-			};
+-		};
++&partitions {
++	partition@580000 {
++		label = "ubi";
++		reg = <0x580000 0x3200000>;
+ 	};
+-};
+-
+-&spi0 {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&spi0_flash_pins>;
+-	status = "okay";
+-
+-	spi_nand@0 {
+-		compatible = "spi-nand";
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		reg = <0>;
+-
+-		spi-max-frequency = <52000000>;
+-		spi-tx-bus-width = <4>;
+-		spi-rx-bus-width = <4>;
+-
+-		mediatek,nmbm;
+-		mediatek,bmt-max-ratio = <1>;
+-		mediatek,bmt-max-reserved-blocks = <64>;
+-
+-		partitions {
+-			compatible = "fixed-partitions";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-
+-			partition@0 {
+-				label = "BL2";
+-				reg = <0x00 0x100000>;
+-				read-only;
+-			};
+-
+-			partition@100000 {
+-				label = "u-boot-env";
+-				reg = <0x100000 0x80000>;
+-			};
+-
+-			partition@180000 {
+-				label = "Factory";
+-				reg = <0x180000 0x200000>;
+-				read-only;
+-
+-				nvmem-layout {
+-					compatible = "fixed-layout";
+-					#address-cells = <1>;
+-					#size-cells = <1>;
+-
+-					eeprom_factory_0: eeprom@0 {
+-						reg = <0x0 0x1000>;
+-					};
+-				};
+-			};
+-
+-			partition@380000 {
+-				label = "FIP";
+-				reg = <0x380000 0x200000>;
+-				read-only;
+-			};
+-
+-			partition@580000 {
+-				label = "ubi";
+-				reg = <0x580000 0x3200000>;
+-			};
+-
+-			partition@3780000 {
+-				label = "ubi1";
+-				reg = <0x3780000 0x3200000>;
+-				read-only;
+-			};
+-
+-			partition@6980000 {
+-				label = "Odm";
+-				reg = <0x6980000 0x40000>;
+-				read-only;
+-
+-				nvmem-layout {
+-					compatible = "fixed-layout";
+-					#address-cells = <1>;
+-					#size-cells = <1>;
+-
+-					macaddr_odm: macaddr@81 {
+-						compatible = "mac-base";
+-						reg = <0x81 0x6>;
+-						#nvmem-cell-cells = <1>;
+-					};
+-				};
+-				
+-			};
+-
+-			partition@69c0000 {
+-				label = "Config1";
+-				reg = <0x69c0000 0x80000>;
+-				read-only;
+-			};
+-
+-			partition@6a40000 {
+-				label = "Config2";
+-				reg = <0x6a40000 0x80000>;
+-				read-only;
+-			};
+-
+-			partition@6ac0000 {
+-				label = "Storage";
+-				reg = <0x6ac0000 0xA00000>;
+-				read-only;
+-			};
+-		};
+-	};
+-};
+-
+-&pio {
+-	spi0_flash_pins: spi0-pins {
+-		mux {
+-			function = "spi";
+-			groups = "spi0", "spi0_wp_hold";
+-		};
+-
+-		conf-pu {
+-			pins = "SPI0_CS", "SPI0_HOLD", "SPI0_WP";
+-			drive-strength = <MTK_DRIVE_8mA>;
+-			bias-pull-down = <MTK_PUPD_SET_R1R0_00>;
+-		};
+-
+-		conf-pd {
+-			pins = "SPI0_CLK", "SPI0_MOSI", "SPI0_MISO";
+-			drive-strength = <MTK_DRIVE_8mA>;
+-			bias-pull-down = <MTK_PUPD_SET_R1R0_00>;
+-		};
+-	};
+-
+-	i2c_pins_g0: i2c-pins-g0 {
+-		mux {
+-			function = "i2c";
+-			groups = "i2c0_1";
+-		};
+-	};
+-};
+-
+-&wifi {
+-	status = "okay";
+-
+-	nvmem-cells = <&eeprom_factory_0>, <&macaddr_odm 2>;
+-	nvmem-cell-names = "eeprom", "mac-address";
+-};
+-
+-&i2c0 {
+-	status = "okay";
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&i2c_pins_g0>;
+-
+-	gca230718@40 {
+-		compatible = "unknown,gca230718";
+-		reg = <0x40>;
+-
+-		led_status_red: led@0 {
+-			color = <LED_COLOR_ID_RED>;
+-			function = LED_FUNCTION_STATUS;
+-			reg = <0>;
+-		};
+-
+-		led@1 {
+-			color = <LED_COLOR_ID_GREEN>;
+-			function = LED_FUNCTION_STATUS;
+-			reg = <1>;
+-		};
+-
+-		led_status_blue: led@2 {
+-			color = <LED_COLOR_ID_BLUE>;
+-			function = LED_FUNCTION_STATUS;
+-			reg = <2>;
+-		};
+ 
+-		led_status_white: led@3 {
+-			color = <LED_COLOR_ID_WHITE>;
+-			function = LED_FUNCTION_STATUS;
+-			reg = <3>;
+-		};
++	partition@3780000 {
++		label = "ubi1";
++		reg = <0x3780000 0x3200000>;
++		read-only;
+ 	};
+ };
+diff --git a/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dtsi b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dtsi
+new file mode 100644
+index 0000000000..4f7e084758
+--- /dev/null
++++ b/target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1.dtsi
+@@ -0,0 +1,295 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++
++/dts-v1/;
++
++#include "mt7981b.dtsi"
++
++/ {
++	aliases {
++		label-mac-device = &gmac0;
++		led-boot = &led_status_white;
++		led-failsafe = &led_status_red;
++		led-running = &led_status_white;
++		led-upgrade = &led_status_blue;
++		serial0 = &uart0;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		button-reset {
++			label = "reset";
++			linux,code = <KEY_RESTART>;
++			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
++		};
++
++		button-wps {
++			label = "wps";
++			linux,code = <KEY_WPS_BUTTON>;
++			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
++		};
++
++		button-leds-on-off {
++			label = "leds-on-off";
++			linux,code = <KEY_LIGHTS_TOGGLE>;
++			gpios = <&pio 4 GPIO_ACTIVE_LOW>;
++		};
++	};
++};
++
++&uart0 {
++	status = "okay";
++};
++
++&watchdog {
++	status = "okay";
++};
++
++&eth {
++	pinctrl-names = "default";
++	pinctrl-0 = <&mdio_pins>;
++
++	status = "okay";
++
++	gmac0: mac@0 {
++		compatible = "mediatek,eth-mac";
++		reg = <0>;
++		phy-mode = "2500base-x";
++
++		nvmem-cells = <&macaddr_odm 1>;
++		nvmem-cell-names = "mac-address";
++
++		fixed-link {
++			speed = <2500>;
++			full-duplex;
++			pause;
++		};
++	};
++
++	gmac1: mac@1 {
++		compatible = "mediatek,eth-mac";
++		reg = <1>;
++		phy-mode = "gmii";
++		phy-handle = <&int_gbe_phy>;
++		label = "internet";
++
++		nvmem-cells = <&macaddr_odm 0>;
++		nvmem-cell-names = "mac-address";
++	};
++};
++
++&mdio_bus {
++	switch: switch@1f {
++		compatible = "mediatek,mt7531";
++		reg = <31>;
++		reset-gpios = <&pio 39 GPIO_ACTIVE_HIGH>;
++
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port@0 {
++				reg = <0>;
++				label = "lan1";
++			};
++
++			port@1 {
++				reg = <1>;
++				label = "lan2";
++			};
++
++			port@2 {
++				reg = <2>;
++				label = "lan3";
++			};
++
++			port@3 {
++				reg = <3>;
++				label = "lan4";
++			};
++
++			port@6 {
++				reg = <6>;
++				label = "cpu";
++				ethernet = <&gmac0>;
++				phy-mode = "2500base-x";
++
++				fixed-link {
++					speed = <2500>;
++					full-duplex;
++					pause;
++				};
++			};
++		};
++	};
++};
++
++&spi0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&spi0_flash_pins>;
++	status = "okay";
++
++	spi_nand@0 {
++		compatible = "spi-nand";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		reg = <0>;
++
++		spi-max-frequency = <52000000>;
++		spi-tx-bus-width = <4>;
++		spi-rx-bus-width = <4>;
++
++		mediatek,nmbm;
++		mediatek,bmt-max-ratio = <1>;
++		mediatek,bmt-max-reserved-blocks = <64>;
++
++		partitions: partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "BL2";
++				reg = <0x00 0x100000>;
++				read-only;
++			};
++
++			partition@100000 {
++				label = "u-boot-env";
++				reg = <0x100000 0x80000>;
++			};
++
++			partition@180000 {
++				label = "Factory";
++				reg = <0x180000 0x200000>;
++				read-only;
++
++				nvmem-layout {
++					compatible = "fixed-layout";
++					#address-cells = <1>;
++					#size-cells = <1>;
++
++					eeprom_factory_0: eeprom@0 {
++						reg = <0x0 0x1000>;
++					};
++				};
++			};
++
++			partition@380000 {
++				label = "FIP";
++				reg = <0x380000 0x200000>;
++				read-only;
++			};
++
++			partition@6980000 {
++				label = "Odm";
++				reg = <0x6980000 0x40000>;
++				read-only;
++
++				nvmem-layout {
++					compatible = "fixed-layout";
++					#address-cells = <1>;
++					#size-cells = <1>;
++
++					macaddr_odm: macaddr@81 {
++						compatible = "mac-base";
++						reg = <0x81 0x6>;
++						#nvmem-cell-cells = <1>;
++					};
++				};
++			};
++
++			partition@69c0000 {
++				label = "Config1";
++				reg = <0x69c0000 0x80000>;
++				read-only;
++			};
++
++			partition@6a40000 {
++				label = "Config2";
++				reg = <0x6a40000 0x80000>;
++				read-only;
++			};
++
++			partition@6ac0000 {
++				label = "Storage";
++				reg = <0x6ac0000 0xA00000>;
++				read-only;
++			};
++		};
++	};
++};
++
++&pio {
++	spi0_flash_pins: spi0-pins {
++		mux {
++			function = "spi";
++			groups = "spi0", "spi0_wp_hold";
++		};
++
++		conf-pu {
++			pins = "SPI0_CS", "SPI0_HOLD", "SPI0_WP";
++			drive-strength = <MTK_DRIVE_8mA>;
++			bias-pull-down = <MTK_PUPD_SET_R1R0_00>;
++		};
++
++		conf-pd {
++			pins = "SPI0_CLK", "SPI0_MOSI", "SPI0_MISO";
++			drive-strength = <MTK_DRIVE_8mA>;
++			bias-pull-down = <MTK_PUPD_SET_R1R0_00>;
++		};
++	};
++
++	i2c_pins_g0: i2c-pins-g0 {
++		mux {
++			function = "i2c";
++			groups = "i2c0_1";
++		};
++	};
++};
++
++&wifi {
++	status = "okay";
++
++	nvmem-cells = <&eeprom_factory_0>, <&macaddr_odm 2>;
++	nvmem-cell-names = "eeprom", "mac-address";
++};
++
++&i2c0 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&i2c_pins_g0>;
++
++	gca230718@40 {
++		compatible = "unknown,gca230718";
++		reg = <0x40>;
++
++		led_status_red: led@0 {
++			color = <LED_COLOR_ID_RED>;
++			function = LED_FUNCTION_STATUS;
++			reg = <0>;
++		};
++
++		led@1 {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_STATUS;
++			reg = <1>;
++		};
++
++		led_status_blue: led@2 {
++			color = <LED_COLOR_ID_BLUE>;
++			function = LED_FUNCTION_STATUS;
++			reg = <2>;
++		};
++
++		led_status_white: led@3 {
++			color = <LED_COLOR_ID_WHITE>;
++			function = LED_FUNCTION_STATUS;
++			reg = <3>;
++		};
++	};
++};
+diff --git a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+index 11dd94aef6..e2db0aed6c 100644
+--- a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
++++ b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+@@ -98,6 +98,7 @@ mediatek_setup_interfaces()
+ 		ucidef_set_interfaces_lan_wan eth1 eth0
+ 		;;
+ 	dlink,aquila-pro-ai-m30-a1|\
++	dlink,aquila-pro-ai-m30-a1-ubootmod|\
+ 	dlink,aquila-pro-ai-m60-a1)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" internet
+ 		;;
+diff --git a/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac b/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
+index 01e943617a..9d987a7498 100644
+--- a/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
++++ b/target/linux/mediatek/filogic/base-files/etc/hotplug.d/ieee80211/11_fix_wifi_mac
+@@ -90,7 +90,8 @@ case "$board" in
+ 		[ "$PHYNBR" = "0" ] && echo "$addr" > /sys${DEVPATH}/macaddress
+ 		[ "$PHYNBR" = "1" ] && macaddr_setbit_la $(macaddr_add $addr 1) > /sys${DEVPATH}/macaddress
+ 		;;
+-	dlink,aquila-pro-ai-m30-a1)
++	dlink,aquila-pro-ai-m30-a1|\
++	dlink,aquila-pro-ai-m30-a1-ubootmod)
+ 		addr=$(mtd_get_mac_binary "Odm" 0x81)
+ 		[ "$PHYNBR" = "1" ] && macaddr_add $addr 3 > /sys${DEVPATH}/macaddress
+ 		;;
+diff --git a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
+index d747de1d13..16899b2c23 100755
+--- a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
++++ b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
+@@ -12,6 +12,20 @@ asus_initial_setup()
+ 	ubimkvol /dev/ubi0 -N jffs2 -s 0x3e000
+ }
+ 
++dlink_initial_setup()
++{
++	# setup uboot-env if it's running on initramfs
++	[ "$(rootfs_type)" = "tmpfs" ] || return 0
++
++	local board=$(board_name)
++	case "$board" in
++	dlink,aquila-pro-ai-m30-a1-ubootmod)
++		fw_setenv mtdparts "nmbm0:1024k(bl2),512k(u-boot-env),2048k(factory),2048k(fip),102400k(ubi),256k(Odm),512k(Config1),512k(Config2),5120k(Storage)"
++		fw_setenv mupgrade_en 0
++		;;
++	esac
++}
++
+ xiaomi_initial_setup()
+ {
+ 	# initialize UBI and setup uboot-env if it's running on initramfs
+@@ -135,6 +149,7 @@ platform_do_upgrade() {
+ 		default_do_upgrade "$1"
+ 		;;
+ 	dlink,aquila-pro-ai-m30-a1|\
++	dlink,aquila-pro-ai-m30-a1-ubootmod|\
+ 	dlink,aquila-pro-ai-m60-a1)
+ 		fw_setenv sw_tryactive 0
+ 		nand_do_upgrade "$1"
+@@ -254,6 +269,9 @@ platform_pre_upgrade() {
+ 	asus,tuf-ax6000)
+ 		asus_initial_setup
+ 		;;
++	dlink,aquila-pro-ai-m30-a1-ubootmod)
++		dlink_initial_setup
++		;;
+ 	xiaomi,mi-router-ax3000t|\
+ 	xiaomi,mi-router-wr30u-stock|\
+ 	xiaomi,redmi-router-ax6000-stock)
+diff --git a/target/linux/mediatek/image/filogic.mk b/target/linux/mediatek/image/filogic.mk
+index 3bf9d5c177..6aa6be731b 100644
+--- a/target/linux/mediatek/image/filogic.mk
++++ b/target/linux/mediatek/image/filogic.mk
+@@ -825,6 +825,24 @@ endif
+ endef
+ TARGET_DEVICES += dlink_aquila-pro-ai-m30-a1
+ 
++define Device/dlink_aquila-pro-ai-m30-a1-ubootmod
++  DEVICE_VENDOR := D-Link
++  DEVICE_MODEL := AQUILA PRO AI M30 (OpenWrt partition layout)
++  DEVICE_VARIANT := A1
++  DEVICE_DTS := mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod
++  DEVICE_DTS_DIR := ../dts
++  DEVICE_PACKAGES := kmod-leds-gca230718 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
++  KERNEL_IN_UBI := 1
++  IMAGES += recovery.bin
++  IMAGE_SIZE := 51200k
++  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
++ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
++  IMAGE/recovery.bin := append-image-stage initramfs-kernel.bin | sysupgrade-tar kernel=$$$$@ |\
++    pad-to $$(IMAGE_SIZE) | dlink-ai-recovery-header DLK6E6110001 \x6A\x28\xEE\x0B \x00\x00\x2C\x00 \x00\x00\x20\x03 \x61\x6E
++endif
++endef
++TARGET_DEVICES += dlink_aquila-pro-ai-m30-a1-ubootmod
++
+ define Device/dlink_aquila-pro-ai-m60-a1
+   DEVICE_VENDOR := D-Link
+   DEVICE_MODEL := AQUILA PRO AI M60
+-- 
+2.39.5 (Apple Git-154)
+
