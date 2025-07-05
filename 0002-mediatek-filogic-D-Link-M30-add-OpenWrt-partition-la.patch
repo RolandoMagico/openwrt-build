@@ -435,7 +435,7 @@ index 0000000000..4f7e084758
 +
 +/dts-v1/;
 +
-+#include "mt7981b.dtsi"
++#include "mt7981.dtsi"
 +
 +/ {
 +	aliases {
