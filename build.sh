@@ -16,6 +16,9 @@ mkdir output
 git clone https://github.com/openwrt/openwrt.git -b $OPENWRT_TAG
 cd openwrt/
 
+git config --global user.email "reinlroland+github@gmail.com"
+git config --global user.name "Roland Reinl"
+
 git am < ../$DEVICE_PATCH
 
 ./scripts/feeds update -a && ./scripts/feeds install -a
