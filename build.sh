@@ -5,10 +5,11 @@ OPENWRT_TAG=v$OPENWRT_VERSION
 DEVICE_PATCH=0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
 CONFIG_BUILDINFO=https://downloads.openwrt.org/releases/$OPENWRT_VERSION/targets/ipq40xx/generic/config.buildinfo
 EXPECTED_VERMAGIC=eaef302ef5ab82928154706763925f63
-ARTIFACTS=*MR6350*
+TARGET_PROFILE=linksys_mr6350
+OUTPUT_DIR=output
 
 # Create directory for storing the build result
-mkdir output
+mkdir $OUTPUT_DIR
 
 # The following steps are based on the following information
 # - https://hamy.io/post/0015/how-to-compile-openwrt-and-still-use-the-official-repository/
@@ -17,8 +18,8 @@ mkdir output
 git clone https://github.com/openwrt/openwrt.git -b $OPENWRT_TAG
 cd openwrt/
 
-git config --global user.email "reinlroland+github@gmail.com"
-git config --global user.name "Roland Reinl"
+git config --global user.email "nobody@home.com"
+git config --global user.name "Hans Wurscht"
 
 git am < ../$DEVICE_PATCH
 
@@ -43,4 +44,10 @@ fi
 make download
 make -j$(nproc)
 
-cp bin/*/*/$ARTIFACTS ../output
+rsync -avm --include="config.buildinfo" \
+           --include="feeds.buildinfo" \
+           --include="profiles.json" \
+           --include="sha256sums" \
+           --include="version.buildinfo" \
+           --include="*$TARGET_PROFILE*" \
+           --exclude="*" bin/targets/*/*/ ../$OUTPUT_DIR
