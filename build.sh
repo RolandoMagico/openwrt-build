@@ -1,6 +1,6 @@
 #!/bin/bash
 # Configuration section
-OPENWRT_VERSION=24.10.3
+OPENWRT_VERSION=24.10.4
 OPENWRT_TAG=v$OPENWRT_VERSION
 DEVICE_PATCH=0001-ipq40xx-Add-support-for-Linksys-MR6350.patch
 CONFIG_BUILDINFO=https://downloads.openwrt.org/releases/$OPENWRT_VERSION/targets/ipq40xx/generic/config.buildinfo

@@ -1,10 +1,11 @@
-From ded0b38f86461b20fd8f85fb113ee9edaa961b77 Mon Sep 17 00:00:00 2001
-From: Roland Reinl <reinlroland+github@gmail.com>
-Date: Tue, 15 Apr 2025 17:09:03 +0200
-Subject: [PATCH] ipq40xx: Add support for Linksys MR6350
+From 610f324188f70df8f910b60d59dc8edc8a127bee Mon Sep 17 00:00:00 2001
+From: Hans Wurscht <nobody@home.com>
+Date: Sun, 26 Oct 2025 12:53:09 +0100
+Subject: [PATCH] Add support for Linksys MR6350
 
 ---
  package/boot/uboot-envtools/files/ipq40xx     |   1 +
+ package/firmware/ipq-wifi/Makefile            |   2 +
  .../ipq40xx/base-files/etc/board.d/02_network |   2 +
  .../etc/hotplug.d/firmware/11-ath10k-caldata  |   3 +
  .../ipq40xx/base-files/etc/init.d/bootcount   |   1 +
@@ -14,7 +15,7 @@ Subject: [PATCH] ipq40xx: Add support for Linksys MR6350
  .../base-files/lib/upgrade/platform.sh        |   1 +
  .../arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts | 114 ++++++++++++++++++
  target/linux/ipq40xx/image/generic.mk         |  17 +++
- 10 files changed, 142 insertions(+), 1 deletion(-)
+ 11 files changed, 144 insertions(+), 1 deletion(-)
  create mode 100644 target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
 
 diff --git a/package/boot/uboot-envtools/files/ipq40xx b/package/boot/uboot-envtools/files/ipq40xx
@@ -29,8 +30,28 @@ index 717158b042..ff2ad72949 100644
  linksys,mr8300)
  	ubootenv_add_uci_config "/dev/mtd7" "0x0" "0x40000" "0x20000"
  	;;
+diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
+index f939f65c89..56b7b076a1 100644
+--- a/package/firmware/ipq-wifi/Makefile
++++ b/package/firmware/ipq-wifi/Makefile
+@@ -38,6 +38,7 @@ ALLWIFIBOARDS:= \
+ 	edgecore_eap102 \
+ 	edimax_cax1800 \
+ 	linksys_homewrk \
++	linksys_mr6350 \
+ 	linksys_mx4200 \
+ 	linksys_mx5300 \
+ 	linksys_mx8500 \
+@@ -172,6 +173,7 @@ $(eval $(call generate-ipq-wifi-package,dynalink_dl-wrx36,Dynalink DL-WRX36))
+ $(eval $(call generate-ipq-wifi-package,edgecore_eap102,Edgecore EAP102))
+ $(eval $(call generate-ipq-wifi-package,edimax_cax1800,Edimax CAX1800))
+ $(eval $(call generate-ipq-wifi-package,linksys_homewrk,Linksys HomeWRK))
++$(eval $(call generate-ipq-wifi-package,linksys_mr6350,Linksys MR6350))
+ $(eval $(call generate-ipq-wifi-package,linksys_mx4200,Linksys MX4200))
+ $(eval $(call generate-ipq-wifi-package,linksys_mx5300,Linksys MX5300))
+ $(eval $(call generate-ipq-wifi-package,linksys_mx8500,Linksys MX8500))
 diff --git a/target/linux/ipq40xx/base-files/etc/board.d/02_network b/target/linux/ipq40xx/base-files/etc/board.d/02_network
-index 549e1ac0c9..59abb5db29 100644
+index 549e1ac0c9..7db2e714e4 100644
 --- a/target/linux/ipq40xx/base-files/etc/board.d/02_network
 +++ b/target/linux/ipq40xx/base-files/etc/board.d/02_network
 @@ -17,6 +17,7 @@ ipq40xx_setup_interfaces()
@@ -45,7 +66,7 @@ index 549e1ac0c9..59abb5db29 100644
  		;;
  	linksys,ea6350v3|\
  	linksys,ea8300  |\
-+	linksys,mr6350|\
++	linksys,mr6350  |\
  	linksys,mr8300)
  		wan_mac=$(mtd_get_mac_ascii devinfo hw_mac_addr)
  		lan_mac=$(macaddr_add "$wan_mac" 1)
@@ -102,7 +123,7 @@ index c011920897..0f933b71cd 100644
  ezviz,cs-w3-wd1200g-eup)
  	uci set system.@system[0].compat_version="2.0"
 diff --git a/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh b/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh
-index 1ede544aac..afe607332a 100644
+index 092f9da440..8a8d224a45 100644
 --- a/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh
 +++ b/target/linux/ipq40xx/base-files/lib/preinit/05_set_iface_mac_ipq40xx.sh
 @@ -25,6 +25,7 @@ preinit_set_mac_address() {
@@ -140,7 +161,7 @@ index 53a9561148..53e36a9def 100644
  	linksys,whw03v2)
 diff --git a/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
 new file mode 100644
-index 0000000000..20785b730c
+index 0000000000..d936e720e4
 --- /dev/null
 +++ b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
 @@ -0,0 +1,114 @@
@@ -231,12 +252,12 @@ index 0000000000..20785b730c
 +
 +&wifi0 {
 +	status = "okay";
-+	qcom,ath10k-calibration-variant = "Linksys-MR6350";
++	qcom,ath10k-calibration-variant = "linksys-mr6350";
 +};
 +
 +&wifi1 {
 +	status = "okay";
-+	qcom,ath10k-calibration-variant = "Linksys-MR6350";
++	qcom,ath10k-calibration-variant = "linksys-mr6350";
 +};
 +
 +&swport1 {
@@ -259,7 +280,7 @@ index 0000000000..20785b730c
 +	label = "lan4";
 +};
 diff --git a/target/linux/ipq40xx/image/generic.mk b/target/linux/ipq40xx/image/generic.mk
-index 21841f4bf1..ca5cd2b850 100644
+index 86bcaf8406..61a80600a5 100644
 --- a/target/linux/ipq40xx/image/generic.mk
 +++ b/target/linux/ipq40xx/image/generic.mk
 @@ -713,6 +713,23 @@ define Device/linksys_ea8300
@@ -279,7 +300,7 @@ index 21841f4bf1..ca5cd2b850 100644
 +	UBINIZE_OPTS := -E 5    # EOD marks to "hide" factory sig at EOF
 +	IMAGES += factory.bin
 +	IMAGE/factory.bin  := append-kernel | pad-to $$(KERNEL_SIZE) | append-ubi | linksys-image type=MR6350
-+	DEVICE_PACKAGES := ath10k-firmware-qca9888-ct ipq-wifi-linksys_mr6350 kmod-usb-ledtrig-usbport
++	DEVICE_PACKAGES := ipq-wifi-linksys_mr6350 kmod-usb-ledtrig-usbport
 +endef
 +TARGET_DEVICES += linksys_mr6350
 +
