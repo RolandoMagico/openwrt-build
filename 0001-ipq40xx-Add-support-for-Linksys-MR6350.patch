@@ -1,7 +1,7 @@
-From 610f324188f70df8f910b60d59dc8edc8a127bee Mon Sep 17 00:00:00 2001
+From 33d4a6c959c5c9c42f668e2c8fb2a4f97108037b Mon Sep 17 00:00:00 2001
 From: Hans Wurscht <nobody@home.com>
-Date: Sun, 26 Oct 2025 12:53:09 +0100
-Subject: [PATCH] Add support for Linksys MR6350
+Date: Sun, 9 Nov 2025 08:11:37 +0100
+Subject: [PATCH] ipq40xx: Add support for Linksys MR6350
 
 ---
  package/boot/uboot-envtools/files/ipq40xx     |   1 +
@@ -13,9 +13,9 @@ Subject: [PATCH] Add support for Linksys MR6350
  .../lib/preinit/05_set_iface_mac_ipq40xx.sh   |   1 +
  .../ipq40xx/base-files/lib/upgrade/linksys.sh |   2 +-
  .../base-files/lib/upgrade/platform.sh        |   1 +
- .../arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts | 114 ++++++++++++++++++
+ .../arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts | 115 ++++++++++++++++++
  target/linux/ipq40xx/image/generic.mk         |  17 +++
- 11 files changed, 144 insertions(+), 1 deletion(-)
+ 11 files changed, 145 insertions(+), 1 deletion(-)
  create mode 100644 target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
 
 diff --git a/package/boot/uboot-envtools/files/ipq40xx b/package/boot/uboot-envtools/files/ipq40xx
@@ -51,7 +51,7 @@ index f939f65c89..56b7b076a1 100644
  $(eval $(call generate-ipq-wifi-package,linksys_mx5300,Linksys MX5300))
  $(eval $(call generate-ipq-wifi-package,linksys_mx8500,Linksys MX8500))
 diff --git a/target/linux/ipq40xx/base-files/etc/board.d/02_network b/target/linux/ipq40xx/base-files/etc/board.d/02_network
-index 549e1ac0c9..7db2e714e4 100644
+index 549e1ac0c9..59abb5db29 100644
 --- a/target/linux/ipq40xx/base-files/etc/board.d/02_network
 +++ b/target/linux/ipq40xx/base-files/etc/board.d/02_network
 @@ -17,6 +17,7 @@ ipq40xx_setup_interfaces()
@@ -66,19 +66,19 @@ index 549e1ac0c9..7db2e714e4 100644
  		;;
  	linksys,ea6350v3|\
  	linksys,ea8300  |\
-+	linksys,mr6350  |\
++	linksys,mr6350|\
  	linksys,mr8300)
  		wan_mac=$(mtd_get_mac_ascii devinfo hw_mac_addr)
  		lan_mac=$(macaddr_add "$wan_mac" 1)
 diff --git a/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata b/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
-index 4a1a0ff311..74b336022e 100644
+index 4a1a0ff311..4cb8c0b83a 100644
 --- a/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
 +++ b/target/linux/ipq40xx/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
 @@ -35,6 +35,7 @@ case "$FIRMWARE" in
  		/usr/bin/fritz_cal_extract -i 1 -s 0x3C000 -e 0x212 -l 12064 -o /lib/firmware/$FIRMWARE $(find_mtd_chardev "urlader1")
  		;;
  	linksys,ea8300 |\
-+	linksys,mr6350 |\
++	linksys,mr6350|\
  	linksys,mr8300)
  		caldata_extract "ART" 0x9000 0x2f20
  		# OEM assigns 4 sequential MACs
@@ -86,7 +86,7 @@ index 4a1a0ff311..74b336022e 100644
  		ath10k_patch_mac $(mtd_get_mac_ascii CFG1 RADIOADDR0)
  		;;
  	linksys,ea8300 |\
-+	linksys,mr6350 |\
++	linksys,mr6350|\
  	linksys,mr8300)
  		caldata_extract "ART" 0x1000 0x2f20
  		ath10k_patch_mac $(macaddr_add "$(cat /sys/class/net/eth0/address)" 2)
@@ -94,7 +94,7 @@ index 4a1a0ff311..74b336022e 100644
  		ath10k_patch_mac $(mtd_get_mac_ascii CFG1 RADIOADDR1)
  		;;
  	linksys,ea8300 |\
-+	linksys,mr6350 |\
++	linksys,mr6350|\
  	linksys,mr8300)
  		caldata_extract "ART" 0x5000 0x2f20
  		ath10k_patch_mac $(macaddr_add "$(cat /sys/class/net/eth0/address)" 3)
@@ -148,23 +148,23 @@ index 860c3fd2de..256b3cfb91 100644
  	#      then bootipq;
  	#  elif test $boot_part = 1;
 diff --git a/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh b/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
-index 53a9561148..53e36a9def 100644
+index 53a9561148..84a36a70c8 100644
 --- a/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
 @@ -170,6 +170,7 @@ platform_do_upgrade() {
  		;;
  	linksys,ea6350v3 |\
  	linksys,ea8300 |\
-+	linksys,mr6350 |\
++	linksys,mr6350|\
  	linksys,mr8300 |\
  	linksys,whw01 |\
  	linksys,whw03v2)
 diff --git a/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
 new file mode 100644
-index 0000000000..d936e720e4
+index 0000000000..ccd8b91cd4
 --- /dev/null
 +++ b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-mr6350.dts
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,115 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 +
 +#include "qcom-ipq4019-xx8300.dtsi"
@@ -180,6 +180,7 @@ index 0000000000..d936e720e4
 +		led-running = &led_green;
 +		led-upgrade = &led_blue;
 +		serial0 = &blsp1_uart1;
++		label-mac-device = &ethphy0;
 +	};
 +
 +	// Top panel LEDs, above Linksys logo
