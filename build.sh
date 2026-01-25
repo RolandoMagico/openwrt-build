@@ -1,8 +1,11 @@
 #!/bin/bash
+# Disable SSL certificate verification (for corporate proxies)
+export GIT_SSL_NO_VERIFY=1
+
 # Configuration section
-OPENWRT_TAG=v24.10.2
+OPENWRT_TAG=v24.10.5
 DEVICE_PATCH=0001-mediatek-filogic-D-Link-M30-M60-include-initramfs-in.patch
-CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.2/targets/mediatek/filogic/config.buildinfo
+CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.5/targets/mediatek/filogic/config.buildinfo
 ARTIFACTS=*M30*
 
 # Create directory for storing the build result
@@ -15,12 +18,16 @@ mkdir output
 git clone https://github.com/openwrt/openwrt.git -b $OPENWRT_TAG
 cd openwrt/
 
+# Configure git user for applying patches
+git config user.email "build@local"
+git config user.name "Build"
+
 git am < ../$DEVICE_PATCH
 git am < ../0002-mediatek-filogic-D-Link-M30-add-OpenWrt-partition-la.patch
 
 ./scripts/feeds update -a && ./scripts/feeds install -a
 
-wget -O .config $CONFIG_BUILDINFO
+wget --no-check-certificate -O .config $CONFIG_BUILDINFO
 
 make defconfig
 
@@ -28,10 +35,10 @@ make defconfig
 make target/linux/{clean,compile}
 
 # The following command should print the vermagic "6a9e125268c43e0bae8cecb014c8ab03"
-find build_dir/ -name .vermagic -exec cat {} \;
-read -p "Press enter to continue"
+VERMAGIC=$(find build_dir/ -name .vermagic -exec cat {} \;)
+echo "Vermagic: $VERMAGIC"
 
-make download
+make download DOWNLOAD_CHECK_CERTIFICATE=
 make -j$(nproc)
 
 cp bin/*/*/$ARTIFACTS ../output
