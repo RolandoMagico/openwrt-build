@@ -8,7 +8,7 @@ OPENWRT_TAG=v24.10.5
 # We only need the ubootmod patch for the merged partition layout.
 DEVICE_PATCH=0001-mediatek-filogic-D-Link-M30-add-ubootmod-variant.patch
 CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.5/targets/mediatek/filogic/config.buildinfo
-ARTIFACTS=*M30*
+ARTIFACTS=*m30*
 
 # Create directory for storing the build result
 mkdir output
@@ -43,4 +43,4 @@ echo "Vermagic: $VERMAGIC"
 make download DOWNLOAD_CHECK_CERTIFICATE=
 make -j$(nproc)
 
-cp bin/*/*/$ARTIFACTS ../output
+cp bin/targets/*/*/$ARTIFACTS ../output
