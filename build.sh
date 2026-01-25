@@ -4,7 +4,9 @@ export GIT_SSL_NO_VERIFY=1
 
 # Configuration section
 OPENWRT_TAG=v24.10.5
-DEVICE_PATCH=0001-mediatek-filogic-D-Link-M30-M60-include-initramfs-in.patch
+# NOTE: The initramfs recovery patch is no longer needed - it was merged upstream in v24.10.5!
+# We only need the ubootmod patch for the merged partition layout.
+DEVICE_PATCH=0001-mediatek-filogic-D-Link-M30-add-ubootmod-variant.patch
 CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.5/targets/mediatek/filogic/config.buildinfo
 ARTIFACTS=*M30*
 
@@ -22,8 +24,8 @@ cd openwrt/
 git config user.email "build@local"
 git config user.name "Build"
 
+# Apply the ubootmod patch (adds D-Link M30 with merged partitions for extra storage)
 git am < ../$DEVICE_PATCH
-git am < ../0002-mediatek-filogic-D-Link-M30-add-OpenWrt-partition-la.patch
 
 ./scripts/feeds update -a && ./scripts/feeds install -a
 
