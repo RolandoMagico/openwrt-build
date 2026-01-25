@@ -1,6 +1,6 @@
-From 5e10404cb327967f1bf4873c9d4c01754286f8d1 Mon Sep 17 00:00:00 2001
+From 9d764e1f5bdaef6358a37c9bd577350342fda6d2 Mon Sep 17 00:00:00 2001
 From: mehparmar <mehparmar@paypal.com>
-Date: Mon, 26 Jan 2026 00:22:21 +0530
+Date: Mon, 26 Jan 2026 00:31:10 +0530
 Subject: [PATCH] mediatek: filogic: D-Link M30: add ubootmod variant (OpenWrt
  partition layout)
 
@@ -12,15 +12,20 @@ partition (~100MB vs ~50MB stock), providing significantly more storage space.
 
 Key changes:
 - Add new standalone DTS file for ubootmod variant (does NOT modify stock DTS)
-- Add device definition in filogic.mk with recovery.bin generation
+- Add device definition in filogic.mk (sysupgrade.itb only, no recovery.bin)
 - Add ubootmod variant to uboot-envtools configuration
 - Add ubootmod variant to network setup scripts
 - Add ubootmod variant to WiFi MAC address fixup
 - Add ubootmod variant to platform upgrade handler (uses fit_do_upgrade)
 
 Installation process:
-1. Flash stock recovery.bin via D-Link recovery mode (192.168.200.1)
-2. Boot into initramfs and flash ubootmod sysupgrade to repartition
+1. Flash STOCK recovery.bin via D-Link recovery mode (192.168.200.1)
+2. Boot into stock OpenWrt initramfs
+3. Flash ubootmod sysupgrade.itb to repartition and gain extra storage
+
+Note: The ubootmod recovery.bin is intentionally NOT generated because
+D-Link's bootloader expects the stock partition layout. Use the stock
+recovery.bin (already in upstream v24.10.5) for initial installation.
 
 Signed-off-by: OpenWrt Builder <builder@openwrt.org>
 ---
@@ -29,8 +34,8 @@ Signed-off-by: OpenWrt Builder <builder@openwrt.org>
  .../filogic/base-files/etc/board.d/02_network |   1 +
  .../etc/hotplug.d/ieee80211/11_fix_wifi_mac   |   3 +-
  .../base-files/lib/upgrade/platform.sh        |   3 +
- target/linux/mediatek/image/filogic.mk        |  25 ++
- 6 files changed, 340 insertions(+), 1 deletion(-)
+ target/linux/mediatek/image/filogic.mk        |  18 +
+ 6 files changed, 333 insertions(+), 1 deletion(-)
  create mode 100644 target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod.dts
 
 diff --git a/package/boot/uboot-envtools/files/mediatek_filogic b/package/boot/uboot-envtools/files/mediatek_filogic
@@ -400,10 +405,10 @@ index 8af61b0..cee54c6 100755
  	mercusys,mr90x-v1|\
  	tplink,archer-ax80-v1|\
 diff --git a/target/linux/mediatek/image/filogic.mk b/target/linux/mediatek/image/filogic.mk
-index e33f8a3..4d6d629 100644
+index e33f8a3..2fbcf1b 100644
 --- a/target/linux/mediatek/image/filogic.mk
 +++ b/target/linux/mediatek/image/filogic.mk
-@@ -915,6 +915,31 @@ endif
+@@ -915,6 +915,24 @@ endif
  endef
  TARGET_DEVICES += dlink_aquila-pro-ai-m30-a1
  
@@ -422,13 +427,6 @@ index e33f8a3..4d6d629 100644
 +  IMAGES := sysupgrade.itb
 +  IMAGE/sysupgrade.itb := append-ubi | fit-sign $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb |\
 +    append-metadata
-+ifeq ($(IB),)
-+ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
-+  IMAGES += recovery.bin
-+  IMAGE/recovery.bin := append-image-stage initramfs-kernel.bin | sysupgrade-tar kernel=$$$$@ |\
-+    pad-to 51200k | dlink-ai-recovery-header DLK6E6110001 \x6A\x28\xEE\x0B \x00\x00\x2C\x00 \x00\x00\x20\x03 \x61\x6E
-+endif
-+endif
 +endef
 +TARGET_DEVICES += dlink_aquila-pro-ai-m30-a1-ubootmod
 +
