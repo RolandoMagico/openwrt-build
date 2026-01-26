@@ -12,16 +12,16 @@ partition (~100MB vs ~50MB stock), providing significantly more storage space.
 
 Key changes:
 - Add new standalone DTS file for ubootmod variant (does NOT modify stock DTS)
-- Add device definition in filogic.mk (sysupgrade.itb only, no recovery.bin)
+- Add device definition in filogic.mk (sysupgrade.bin only, no recovery.bin)
 - Add ubootmod variant to uboot-envtools configuration
 - Add ubootmod variant to network setup scripts
 - Add ubootmod variant to WiFi MAC address fixup
-- Add ubootmod variant to platform upgrade handler (uses fit_do_upgrade)
+- Add ubootmod variant to platform upgrade handler (uses nand_do_upgrade)
 
 Installation process:
 1. Flash STOCK recovery.bin via D-Link recovery mode (192.168.200.1)
 2. Boot into stock OpenWrt initramfs
-3. Flash ubootmod sysupgrade.itb to repartition and gain extra storage
+3. Flash ubootmod sysupgrade.bin to repartition and gain extra storage
 
 Note: The ubootmod recovery.bin is intentionally NOT generated because
 D-Link's bootloader expects the stock partition layout. Use the stock
@@ -34,8 +34,8 @@ Signed-off-by: OpenWrt Builder <builder@openwrt.org>
  .../filogic/base-files/etc/board.d/02_network |   1 +
  .../etc/hotplug.d/ieee80211/11_fix_wifi_mac   |   3 +-
  .../base-files/lib/upgrade/platform.sh        |   3 +
- target/linux/mediatek/image/filogic.mk        |  18 +
- 6 files changed, 333 insertions(+), 1 deletion(-)
+ target/linux/mediatek/image/filogic.mk        |  13 +
+ 6 files changed, 328 insertions(+), 1 deletion(-)
  create mode 100644 target/linux/mediatek/dts/mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod.dts
 
 diff --git a/package/boot/uboot-envtools/files/mediatek_filogic b/package/boot/uboot-envtools/files/mediatek_filogic
@@ -399,7 +399,7 @@ index 8af61b0..cee54c6 100755
  		nand_do_upgrade "$1"
  		;;
 +	dlink,aquila-pro-ai-m30-a1-ubootmod)
-+		fit_do_upgrade "$1"
++		nand_do_upgrade "$1"
 +		;;
  	mercusys,mr80x-v3|\
  	mercusys,mr90x-v1|\
@@ -408,7 +408,7 @@ diff --git a/target/linux/mediatek/image/filogic.mk b/target/linux/mediatek/imag
 index e33f8a3..2fbcf1b 100644
 --- a/target/linux/mediatek/image/filogic.mk
 +++ b/target/linux/mediatek/image/filogic.mk
-@@ -915,6 +915,24 @@ endif
+@@ -915,6 +915,19 @@ endif
  endef
  TARGET_DEVICES += dlink_aquila-pro-ai-m30-a1
  
@@ -418,15 +418,10 @@ index e33f8a3..2fbcf1b 100644
 +  DEVICE_VARIANT := A1 (OpenWrt U-Boot layout)
 +  DEVICE_DTS := mt7981b-dlink-aquila-pro-ai-m30-a1-ubootmod
 +  DEVICE_DTS_DIR := ../dts
-+  DEVICE_PACKAGES := kmod-leds-gca230718 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware fitblk
-+  BLOCKSIZE := 128k
-+  PAGESIZE := 2048
-+  UBINIZE_OPTS := -E 5
++  DEVICE_PACKAGES := kmod-leds-gca230718 kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware
 +  KERNEL_IN_UBI := 1
 +  IMAGE_SIZE := 102400k
-+  IMAGES := sysupgrade.itb
-+  IMAGE/sysupgrade.itb := append-ubi | fit-sign $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb |\
-+    append-metadata
++  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 +endef
 +TARGET_DEVICES += dlink_aquila-pro-ai-m30-a1-ubootmod
 +
