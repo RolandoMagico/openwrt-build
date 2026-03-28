@@ -4,7 +4,7 @@ OPENWRT_TAG=v24.10.0
 DEVICE_PATCH=0001-ramips-Add-support-for-Cudy-M1300-v2.patch
 CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.0/targets/ramips/mt7621//config.buildinfo
 EXPECTED_VERMAGIC=6a9e125268c43e0bae8cecb014c8ab03
-ARTIFACTS=*M1300*
+TARGET_PROFILE=m1300
 
 # Create directory for storing the build result
 mkdir output
@@ -42,4 +42,10 @@ fi
 make download
 make -j$(nproc)
 
-cp bin/*/*/$ARTIFACTS ../output
+rsync -avm --include="config.buildinfo" \
+           --include="feeds.buildinfo" \
+           --include="profiles.json" \
+           --include="sha256sums" \
+           --include="version.buildinfo" \
+           --include="*$TARGET_PROFILE*" \
+           --exclude="*" bin/targets/*/*/ ../$OUTPUT_DIR
