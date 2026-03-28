@@ -5,9 +5,10 @@ DEVICE_PATCH=0001-ramips-Add-support-for-Cudy-M1300-v2.patch
 CONFIG_BUILDINFO=https://mirror-03.infra.openwrt.org/releases/24.10.0/targets/ramips/mt7621//config.buildinfo
 EXPECTED_VERMAGIC=6a9e125268c43e0bae8cecb014c8ab03
 TARGET_PROFILE=m1300
+OUTPUT_DIR=output
 
 # Create directory for storing the build result
-mkdir output
+mkdir $OUTPUT_DIR
 
 # The following steps are based on the following information
 # - https://hamy.io/post/0015/how-to-compile-openwrt-and-still-use-the-official-repository/
