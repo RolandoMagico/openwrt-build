@@ -14,7 +14,7 @@ on:
         type: choice
         options:
           - main
-          - openwrt-25.10
+          - openwrt-25.12
       device:
         description: "The device to build images for"
         required: true
