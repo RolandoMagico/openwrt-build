@@ -1,5 +1,5 @@
 name: Build OpenWrt Development Image
-run-name: Build ${{ inputs.repository }}, branch ${{ inputs.branch }}
+run-name: Build ${{ inputs.repository }}, version ${{ inputs.version }} for device ${{ inputs.device }}
 
 on:
   workflow_dispatch:
@@ -8,8 +8,15 @@ on:
         description: "OpenWrt Repository URL (optional)"
         required: false
         default: "RolandoMagico/openwrt"
-      branch:
-        description: "Branch to build"
+      version:
+        description: "OpenWrt version to build"
+        required: true
+        type: choice
+        options:
+          - main
+          - openwrt-25.10
+      device:
+        description: "The device to build images for"
         required: true
         type: choice
         options:
@@ -35,11 +42,16 @@ jobs:
           ref: ${{ github.ref }}
           path: ${{ inputs.ci_directory }}
 
+      - name: Determine repository branch
+        id: determine_repo_branch
+        run: |
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          echo openwrt_git_branch=$OPENWRT_GIT_BRANCH >> "$GITHUB_OUTPUT"
       - name: Checkout OpenWrt Repository
         uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repository }}
-          ref: ${{ inputs.branch }}
+          ref: ${{ steps.determine_repo_branch.outputs.openwrt_git_branch }}
           path: ${{ inputs.openwrt_directory }}
 
       - name: Install Dependencies
@@ -56,7 +68,7 @@ jobs:
         run: cd ${{ inputs.openwrt_directory }} && ./scripts/feeds install -a
 
       - name: Copy basic config
-        run: cp ${{ inputs.ci_directory }}/${{ inputs.branch }}/development/diffconfig ${{ inputs.openwrt_directory }}/.config
+        run: cp ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/diffconfig ${{ inputs.openwrt_directory }}/.config
 
       - name: Make default config
         run: cd ${{ inputs.openwrt_directory }} && make defconfig
@@ -69,5 +81,5 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: openwrt-${{ inputs.branch }}
+          name: openwrt-${{ inputs.device }}-${{ inputs.version }}
           path: ${{ inputs.openwrt_directory }}/bin/
