@@ -24,6 +24,7 @@ on:
         required: true
         type: choice
         options:
+          - MR1300v2
           - MR6350
       ci_directory:
         description: "The directory where the CI repository will be checked out to"
