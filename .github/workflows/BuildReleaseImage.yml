@@ -1,5 +1,5 @@
 name: Build OpenWrt Release Image
-run-name: Build ${{ inputs.repository }}, reference ${{ inputs.reference }} for device ${{ inputs.device }}
+run-name: Build ${{ inputs.repository }}, version ${{ inputs.version }} for device ${{ inputs.device }}
 
 on:
   workflow_dispatch:
@@ -8,12 +8,17 @@ on:
         description: "OpenWrt Repository URL (optional)"
         required: false
         default: "openwrt/openwrt"
-      reference:
-        description: "Git reference to build"
+      version:
+        description: "OpenWrt version to build"
         required: true
         type: choice
         options:
-          - v23.05.5
+          - 23.05.5
+          - 24.10.0
+          - 24.10.1
+          - 24.10.2
+          - 24.10.3
+          - 24.10.4
       device:
         description: "The device to build images for"
         required: true
@@ -44,7 +49,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ${{ inputs.repository }}
-          ref: ${{ inputs.reference }}
+          ref: v${{ inputs.version }}
           path: ${{ inputs.openwrt_directory }}
 
       - name: Install Dependencies
@@ -58,7 +63,7 @@ jobs:
         run: cd ${{ inputs.openwrt_directory }} && git config --global user.name "Hans Wurscht" && git config --global user.email "nobody@home.com"
 
       - name: Apply git patch
-        run: cd ${{ inputs.openwrt_directory }} && git am ../${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.reference }}/device.patch
+        run: cd ${{ inputs.openwrt_directory }} && git am ../${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.patch
 
       - name: Update Feeds
         run: cd ${{ inputs.openwrt_directory }} && ./scripts/feeds update -a
@@ -67,7 +72,9 @@ jobs:
         run: cd ${{ inputs.openwrt_directory }} && ./scripts/feeds install -a
 
       - name: Create basic config
-        run: wget -O ${{ inputs.openwrt_directory }}/.config https://downloads.openwrt.org/releases/23.05.5/targets/ipq40xx/generic/config.buildinfo
+        run: |
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          wget -O ${{ inputs.openwrt_directory }}/.config "https://downloads.openwrt.org/releases/${{ inputs.version }}/targets/$OPENWRT_TARGET_DIRECTORY/config.buildinfo"
 
       - name: Make default config
         run: cd ${{ inputs.openwrt_directory }} && make defconfig
@@ -76,11 +83,15 @@ jobs:
         # The following command will probably fail, can be ignored. vermagic should be present afterwards anyway
         run: |
           cd ${{ inputs.openwrt_directory }}
-          make target/linux/{clean,compile}
+          make target/linux/{clean,compile} || echo "Ignore errors, vermagic should still exist"
 
       - name: Compare vermagic
         run: |
-          CURRENT_VERMAGIC=$(find build_dir/ -name .vermagic -exec cat {} \;)
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          MANIFEST_FILE=openwrt-${{ inputs.version }}-${OPENWRT_TARGET_DIRECTORY//\//-}.manifest
+          wget https://downloads.openwrt.org/releases/${{ inputs.version }}/targets/$OPENWRT_TARGET_DIRECTORY/$MANIFEST_FILE
+          EXPECTED_VERMAGIC=$(grep '^kernel - ' "$MANIFEST_FILE" | grep -Eo '[0-9a-fA-F]{32}')
+          CURRENT_VERMAGIC=$(find ${{ inputs.openwrt_directory }}/build_dir/ -name .vermagic -exec cat {} \;)
           if [ "$CURRENT_VERMAGIC" == "$EXPECTED_VERMAGIC" ]; then
             echo "Found expected vermagic $EXPECTED_VERMAGIC"
           else
@@ -99,17 +110,18 @@ jobs:
       - name: Prepare Artifacts
         run: |
           mkdir output
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
           cd ${{ inputs.openwrt_directory }}
           rsync -avm --include="config.buildinfo" \
                      --include="feeds.buildinfo" \
                      --include="profiles.json" \
                      --include="sha256sums" \
                      --include="version.buildinfo" \
-                     --include="*$TARGET_PROFILE*" \
+                     --include="*$OPENWRT_TARGET_PROFILE*" \
                      --exclude="*" bin/targets/*/*/ ../output
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: openwrt-${{ inputs.device }}-${{ inputs.reference }}
+          name: openwrt-${{ inputs.device }}-${{ inputs.version }}
           path: output

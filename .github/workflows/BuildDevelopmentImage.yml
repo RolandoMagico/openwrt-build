@@ -1,5 +1,5 @@
 name: Build OpenWrt Development Image
-run-name: Build ${{ inputs.repository }}, brach ${{ inputs.branch }}
+run-name: Build ${{ inputs.repository }}, branch ${{ inputs.branch }}
 
 on:
   workflow_dispatch:
