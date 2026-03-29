@@ -56,7 +56,7 @@ jobs:
         run: cd ${{ inputs.openwrt_directory }} && ./scripts/feeds install -a
 
       - name: Copy basic config
-        run: cp ${{ inputs.ci_directory }}/${{ inputs.branch }}/diffconfig ${{ inputs.openwrt_directory }}/.config
+        run: cp ${{ inputs.ci_directory }}/${{ inputs.branch }}/development/diffconfig ${{ inputs.openwrt_directory }}/.config
 
       - name: Make default config
         run: cd ${{ inputs.openwrt_directory }} && make defconfig
