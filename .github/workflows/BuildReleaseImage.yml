@@ -1,4 +1,4 @@
-name: Build OpenWrt
+name: Build OpenWrt Release Image
 run-name: Build ${{ inputs.repository }}, reference ${{ inputs.reference }} for device ${{ inputs.device }}
 
 on:
