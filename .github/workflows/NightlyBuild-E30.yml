@@ -1,0 +1,15 @@
+name: Nightly Build of OpenWrt Image for E30
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  build:
+    uses: ./.github/workflows/GenericBuildWorkflow.yml
+    with:
+      workflow: Development
+      repository: RolandoMagico/openwrt
+      version: main
+      device: E30
+      rebase: true
