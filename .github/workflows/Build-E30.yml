@@ -1,4 +1,4 @@
-name: Build of OpenWrt Image for E30
+name: Build OpenWrt Image for E30
 
 on:
   schedule:
