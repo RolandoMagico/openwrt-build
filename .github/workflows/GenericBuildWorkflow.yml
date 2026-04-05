@@ -1,4 +1,4 @@
-name: Build OpenWrt Image
+name: Generic Build Workflow
 run-name: Build ${{ inputs.repository }}, version ${{ inputs.version }} for device ${{ inputs.device }}
 
 on:
