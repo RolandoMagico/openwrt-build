@@ -1,4 +1,4 @@
-name: Build of OpenWrt Image for MR9000
+name: Build OpenWrt Image for MR9000
 
 on:
   schedule:
