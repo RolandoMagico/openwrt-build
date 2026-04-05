@@ -1,8 +1,8 @@
-name: Nightly Build of OpenWrt Image for MR9000
+name: Build of OpenWrt Image for E30
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * Sat'
   workflow_dispatch:
 
 jobs:
@@ -12,5 +12,5 @@ jobs:
       workflow: Development
       repository: RolandoMagico/openwrt
       version: main
-      device: MR9000
+      device: E30
       rebase: true
