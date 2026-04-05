@@ -1,8 +1,8 @@
-name: Nightly Build of OpenWrt Image for MR9000
+name: Build of OpenWrt Image for MR9000
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * Sat'
   workflow_dispatch:
 
 jobs:
