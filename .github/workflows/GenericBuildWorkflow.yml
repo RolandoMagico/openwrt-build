@@ -36,7 +36,7 @@ on:
         default: false
 
 jobs:
-  build:
+  execute:
     runs-on: ubuntu-latest
 
     steps:
@@ -48,8 +48,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt update
-          sudo apt install build-essential clang flex bison g++ gawk \
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential clang flex bison g++ gawk \
           gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
           python3-setuptools rsync swig unzip zlib1g-dev file wget
 
@@ -61,23 +61,28 @@ jobs:
       - name: Checkout OpenWrt Repository
         run: git clone https://github.com/${{ inputs.repository }}.git -b ${{ steps.determine_repo_branch.outputs.openwrt_git_branch }} ${{ inputs.openwrt_directory }}
 
+      - name: Set up git user
+        if: ${{ inputs.workflow == 'Release' || inputs.rebase }}
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: git config user.name "Hans Wurscht" && git config user.email "nobody@home.com"
+
       - name: Rebase
         if: ${{ inputs.rebase }}
-        run: cd ${{ inputs.openwrt_directory }} && git rebase origin/${{ inputs.version }}
-
-      - name: Set up git user
-        if: ${{ inputs.workflow == 'Release' }}
-        run: cd ${{ inputs.openwrt_directory }} && git config --global user.name "Hans Wurscht" && git config --global user.email "nobody@home.com"
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: git rebase origin/${{ inputs.version }}
 
       - name: Apply git patch
         if: ${{ inputs.workflow == 'Release' }}
-        run: cd ${{ inputs.openwrt_directory }} && git am ../${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.patch
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: git am ../${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.patch
 
       - name: Update Feeds
-        run: cd ${{ inputs.openwrt_directory }} && ./scripts/feeds update -a
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: ./scripts/feeds update -a
 
       - name: Install Feeds
-        run: cd ${{ inputs.openwrt_directory }} && ./scripts/feeds install -a
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: ./scripts/feeds install -a
 
       - name: Copy basic config
         if: ${{ inputs.workflow == 'Development' }}
@@ -90,14 +95,14 @@ jobs:
           wget -O ${{ inputs.openwrt_directory }}/.config "https://downloads.openwrt.org/releases/${{ inputs.version }}/targets/$OPENWRT_TARGET_DIRECTORY/config.buildinfo"
 
       - name: Make default config
-        run: cd ${{ inputs.openwrt_directory }} && make defconfig
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: make defconfig
 
       - name: Create vermagic
         if: ${{ inputs.workflow == 'Release' }}
+        working-directory: ${{ inputs.openwrt_directory }}
         # The following command will probably fail, can be ignored. vermagic should be present afterwards anyway
-        run: |
-          cd ${{ inputs.openwrt_directory }}
-          make target/linux/{clean,compile} || echo "Ignore errors, vermagic should still exist"
+        run: make target/linux/{clean,compile} || echo "Ignore errors, vermagic should still exist"
 
       - name: Compare vermagic
         if: ${{ inputs.workflow == 'Release' }}
@@ -116,12 +121,12 @@ jobs:
 
       - name: Download packages
         if: ${{ inputs.workflow == 'Release' }}
-        run: cd ${{ inputs.openwrt_directory }} && make download
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: make download
 
       - name: Build Firmware
-        run: |
-          cd ${{ inputs.openwrt_directory }}
-          make -j$(nproc) || make -j1 V=s
+        working-directory: ${{ inputs.openwrt_directory }}
+        run: make -j$(nproc) || make -j1 V=sc
 
       - name: Prepare Artifacts
         run: |
