@@ -42,9 +42,9 @@ index d447eef73e..f8da53a45c 100644
 -PKG_SOURCE_DATE:=2026-01-28
 -PKG_SOURCE_VERSION:=88514e5aab3e1c0dabad81c7ace815c2fa45565a
 -PKG_MIRROR_HASH:=d51f25001a8cf166bc6d42372861b4290c69dae1f8aaeb9b1e5d85f4b06f8545
-+PKG_SOURCE_URL=https://github.com/rekados/firmware_qca-wireless.git
-+PKG_SOURCE_DATE:=2026-03-07
-+PKG_SOURCE_VERSION:=4e31e1fb1eff26aa03bc486f63ce3c6d04b91960
++PKG_SOURCE_URL=https://github.com/RolandoMagico/firmware_qca-wireless.git
++PKG_SOURCE_DATE:=2026-04-17
++PKG_SOURCE_VERSION:=d0fe35fdd2f72c33e9c355ffaf84aecf8c4a660b
 +# PKG_MIRROR_HASH:=d51f25001a8cf166bc6d42372861b4290c69dae1f8aaeb9b1e5d85f4b06f8545
  PKG_FLAGS:=nonshared
  
