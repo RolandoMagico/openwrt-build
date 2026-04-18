@@ -1,8 +1,8 @@
 name: Build OpenWrt Image for E30
 
 on:
-  schedule:
-    - cron: '0 0 * * Sat'
+#  schedule:
+#    - cron: '0 0 * * Sat'
   workflow_dispatch:
 
 jobs:
