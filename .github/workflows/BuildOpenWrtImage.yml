@@ -38,6 +38,7 @@ on:
         required: true
         type: choice
         options:
+          - AP120
           - E30
           - M1300v2
           - MR6350
