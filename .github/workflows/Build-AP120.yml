@@ -1,0 +1,16 @@
+name: Build OpenWrt Image for AP120
+
+on:
+  schedule:
+    - cron: '0 0 * * Sat'
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/GenericBuildWorkflow.yml
+    with:
+      workflow: Development
+      repository: RolandoMagico/openwrt
+      version: main
+      device: AP120
+      rebase: true
