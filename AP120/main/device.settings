@@ -1,2 +1,2 @@
 OPENWRT_GIT_BRANCH=AP120
-OPENWRT_TARGET_PROFILE=ath79-generic-watchguard_ap300
+OPENWRT_TARGET_PROFILE=ath79-generic-watchguard_ap120
