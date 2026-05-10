@@ -35,6 +35,8 @@ The target profile name is used to determine the name of all artifacts which are
 ### Building release images
 Building release images is used for devices which are not yet supported in OpenWrt but patches for a specific OpenWrt version are available to get the deivce supported. The build is intended to be used to provide the same state as OpenWrt released images for the device.
 
+To get the same state as the official images, the build configuration from the OpenWrt release is used. Advantage is that it is possible to install kernel modules from the official OpenWrt package feeds, disadvantage is that images for all supported devices of the target must be built. Depending on the used runners, this can take several hours. Using the free GitHub runners, one build run currently takes around 4 hours.
+
 The required configuration files must be stored in a subfolder of the device specific folder. The folder name must match the related OpenWrt version, for example ```24.10.4``` or ```25.12.3```.
 
 Two configuration files are needed:
