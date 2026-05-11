@@ -1,5 +1,5 @@
 name: Build OpenWrt Image
-run-name: Build ${{ inputs.repository }}, version ${{ inputs.version }} for device ${{ inputs.device }}
+run-name: Build version ${{ inputs.version }} for device ${{ inputs.device }}
 
 on:
   workflow_dispatch:
