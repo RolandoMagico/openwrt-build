@@ -91,7 +91,7 @@ jobs:
       - name: Create basic config
         if: ${{ inputs.workflow == 'Release' }}
         run: |
-          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/device.settings
           wget -O ${{ inputs.openwrt_directory }}/.config "https://downloads.openwrt.org/releases/${{ inputs.version }}/targets/$OPENWRT_TARGET_DIRECTORY/config.buildinfo"
 
       - name: Make default config
@@ -107,7 +107,7 @@ jobs:
       - name: Compare vermagic
         if: ${{ inputs.workflow == 'Release' }}
         run: |
-          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/device.settings
           MANIFEST_FILE=openwrt-${{ inputs.version }}-${OPENWRT_TARGET_DIRECTORY//\//-}.manifest
           wget https://downloads.openwrt.org/releases/${{ inputs.version }}/targets/$OPENWRT_TARGET_DIRECTORY/$MANIFEST_FILE
           EXPECTED_VERMAGIC=$(grep '^kernel - ' "$MANIFEST_FILE" | grep -Eo '[0-9a-fA-F]{32}')
@@ -131,7 +131,7 @@ jobs:
       - name: Prepare Artifacts
         run: |
           mkdir output
-          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/device.settings
           cd ${{ inputs.openwrt_directory }}
           rsync -avm --include="config.buildinfo" \
                      --include="feeds.buildinfo" \
