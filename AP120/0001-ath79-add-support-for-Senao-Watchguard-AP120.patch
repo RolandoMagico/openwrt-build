@@ -1,0 +1,457 @@
+From d580032c425ad0694fbb90e558232cf495c2c9e3 Mon Sep 17 00:00:00 2001
+From: Roland Reinl <reinlroland+github@gmail.com>
+Date: Mon, 27 Apr 2026 17:59:52 +0200
+Subject: [PATCH] ath79: add support for Senao Watchguard AP120
+
+Device Specs:
+- CPU: QCA9558 MIPS 720MHz
+- RAM: 128MB
+- Flash: 2x16MB
+- 1 LAN port which supports PoE
+- 2.4GHz QCA9558 (a/b/g/n)
+- 5 GHz QCA9882 (ac/n)
+
+Opening the device:
+- There are 4 T10 screws on the back which must be removed
+- You need a screwdriver with a hole in the middle
+- Afterwards, the back cover can be removed
+
+UART:
+- There are four solder pads on the device: One is marked with an arrow (V), which is 3.3V
+- Using a PCBite Kit or similar is helpful if you don't want to solder wires to the board
+- Do NOT connect VCC; only RX, TX and GND are required
+- For GND, you can also connect to one of the aluminum shields on the board
+- Settings 115200, 8N1
+
+PCB Layout:
+|-----| <- Power connector
+|-----|
+
+|-----| <- Ethernet connector
+|     |
+|-----|
+
+                          |------------|
+                          |            |
+                          |            |
+...                       |            |  ||||||||
+                          | Aluminum   | |        |   <- Main flash
+           V              | Shield     |  ||||||||
+          3V3    TXD      |            |
+ UART->    |      |       |            |  ||||||||
+              |      |    |            | |        |   <- Opt flash
+             GND    RXD   |------------|  ||||||||
+
+LEDs:
+- There are 4 LEDs on the front of the device
+  - The power indicator is connected to GPIO0
+  - The LAN LED is connected to GPIO15
+  - The 2.4G LED is connected to GPIO2
+  - The 5.0G LED is not accessible via GPIO, probably directly connected to the Wi-Fi phy
+
+Buttons:
+- One reset button, connected to GPIO17
+
+OEM Memory Layout:
+- Main flash:
+  0x0000_0000-0x0004_0000 : "u-boot"
+  0x0004_0000-0x0006_0000 : "uboot-env"
+  0x0006_0000-0x0026_0000 : "kernel"
+  0x0026_0000-0x00ff_0000 : "rootfs"
+  0x00ff_0000-0x0100_0000 : "ART"
+- Opt flash:
+  0x0100_0000-0x0200_0000 : "opt"
+
+OpenWrt Memory Layout:
+- General information:
+  - Currently, it's not possible to access the opt flash
+    - GPIO13 is configured as GPIO and not as SPI CS1
+    - I didn't find a solution to configure it as SPI CS1 in the DTS
+    - If someone knows how to do it, the opt flash can be used for OpenWrt as well
+
+- Main flash:
+  - "uboot-env" seems to require only 0x1_0000 bytes, after that there is a JFFS image
+    - Therefore, I split the OEM "uboot-env" partition into "uboot-env" and "unknown"
+  - "kernel" and "rootfs" from the OEM layout were adapted similarly to other Watchguard devices
+    - A loader partition at the beginning for the Senao loader
+    - Two partitions, fwconcat0 and fwconcat1 for kernel and rootfs combined via mtd-concat into a firmware partition
+
+MAC addresses:
+- The MAC address on the label is stored in the "art" partition at offset 0
+- The MAC address on the label is the LAN MAC address
+- Wi-Fi 2.4GHz uses the label MAC address + 1
+- Wi-Fi 5GHz uses the label MAC address + 2
+
+Flashing OpenWrt
+- There are two options for flashing OpenWrt (TFTP "recovery" or manual U-Boot flashing), see below
+- Both require loading the initramfs image into RAM via TFTP
+- The TFTP server IP must be 192.168.8.173/24
+- As OpenWrt is accessible via 192.168.1.1 after booting, I recommend configuring two IPs on your computer:
+  - 192.168.8.173/24 for the TFTP server
+  - 192.168.1.100/24 to be able to connect to OpenWrt
+
+- Watch the power LED while loading the initramfs image. OpenWrt becomes accessible via 192.168.1.1 when the power LED stops blinking
+
+- If you want to be able to return to the OEM firmware, make a backup of the oem-backup partition before continuing with the next step
+
+- Flash the sysupgrade image in OpenWrt
+- OpenWrt is booting from flash now
+
+TFTP Recovery Flashing:
+- During boot, the device automatically tries to load c65_atnboot.bin via TFTP
+- Provide the OpenWrt initramfs image as c65_atnboot.bin on the TFTP server
+- After the OpenWrt initramfs has booted, stop providing the c65_atnboot.bin anymore via TFTP; otherwise the device will boot it next time again
+
+U-Boot Flashing:
+- Connect via UART
+- Interrupt the boot process when U-Boot prompts "Hit any key to stop autoboot"
+- Provide the OpenWrt initramfs image as 4308A8C0.img on the TFTP server
+- Execute the following commands:
+  - tftp
+    -> Loads 4308A8C0.img via TFTP into RAM and takes a few seconds
+  - bootm
+    -> Starts the loaded OpenWrt image
+
+Reverting to OEM:
+- Restore the previously created backup of the oem-backup partition
+
+SPI interface:
+- Both flash chips are connected to the same SPI unit
+  - GPIO6: CLK
+  - GPIO7: MOSI
+  - GPIO8: MISO
+
+- GPIO5 is used as CS for the main flash, GPIO13 is used as CS for the opt flash
+
+SPI frequency:
+- The OEM firmware runs with an SPI clock of approximately 8-9MHz
+- OpenWrt runs with 25MHz SPI clock
+- Didn't face any problems with increased SPI frequency so far
+
+Signed-off-by: Roland Reinl <reinlroland+github@gmail.com>
+---
+ .../uboot-tools/uboot-envtools/files/ath79    |   1 +
+ .../ath79/dts/qca9558_watchguard_ap120.dts    | 231 ++++++++++++++++++
+ .../generic/base-files/etc/board.d/01_leds    |   3 +-
+ .../generic/base-files/etc/board.d/02_network |   1 +
+ .../base-files/lib/upgrade/platform.sh        |   1 +
+ target/linux/ath79/image/generic.mk           |  15 ++
+ 6 files changed, 251 insertions(+), 1 deletion(-)
+ create mode 100644 target/linux/ath79/dts/qca9558_watchguard_ap120.dts
+
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/ath79 b/package/boot/uboot-tools/uboot-envtools/files/ath79
+index 95373e5997..666964ebac 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/ath79
++++ b/package/boot/uboot-tools/uboot-envtools/files/ath79
+@@ -79,6 +79,7 @@ ubnt,picostation-m|\
+ ubnt,powerbridge-m|\
+ ubnt,rocket-m|\
+ watchguard,ap100|\
++watchguard,ap120|\
+ watchguard,ap200|\
+ yuncore,a770|\
+ yuncore,a782|\
+diff --git a/target/linux/ath79/dts/qca9558_watchguard_ap120.dts b/target/linux/ath79/dts/qca9558_watchguard_ap120.dts
+new file mode 100644
+index 0000000000..d7f7d5515f
+--- /dev/null
++++ b/target/linux/ath79/dts/qca9558_watchguard_ap120.dts
+@@ -0,0 +1,231 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++
++#include "qca955x.dtsi"
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/leds/common.h>
++#include <dt-bindings/mtd/partitions/uimage.h>
++
++/ {
++	compatible = "watchguard,ap120", "qca,qca9558";
++	model = "WatchGuard AP120";
++
++	aliases {
++		label-mac-device = &eth0;
++		led-boot = &led_power_amber;
++		led-running = &led_power_amber;
++		led-failsafe = &led_power_amber;
++		led-upgrade = &led_power_amber;
++	};
++
++	keys {
++		compatible = "gpio-keys";
++
++		reset {
++			linux,code = <KEY_RESTART>;
++			gpios = <&gpio 17 GPIO_ACTIVE_LOW>;
++			debounce-interval = <60>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		led_power_amber: power-amber {
++			color = <LED_COLOR_ID_AMBER>;
++			function = LED_FUNCTION_POWER;
++			gpios = <&gpio 0 GPIO_ACTIVE_HIGH>;
++		};
++
++		wifi-2g {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_WLAN_2GHZ;
++			gpios = <&gpio 2 GPIO_ACTIVE_HIGH>;
++		};
++
++		lan {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_LAN;
++			gpios = <&gpio 15 GPIO_ACTIVE_LOW>;
++		};
++	};
++
++	virtual_flash {
++		compatible = "mtd-concat";
++		devices = <&fwconcat0 &fwconcat1>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				compatible = "openwrt,uimage", "denx,uimage";
++				openwrt,ih-magic = <0x73714f4b>;
++				label = "firmware";
++				reg = <0x0 0x0>;
++			};
++		};
++	};
++};
++
++&eth0 {
++	status = "okay";
++
++	nvmem-cells = <&macaddr_art_0 0>;
++	nvmem-cell-names = "mac-address";
++
++	phy-handle = <&phy5>;
++	phy-mode = "rgmii-id";
++
++	pll-data = <0x82000000 0x80000101 0x80001313>;
++};
++
++&mdio0 {
++	status = "okay";
++
++	phy5: ethernet-phy@5 {
++		reg = <5>;
++		eee-broken-100tx;
++		eee-broken-1000t;
++	};
++};
++
++&pinmux {
++
++	cs0_pin5: spi-cs0-pin5 {
++		pinctrl-single,bits = <0x4 0x00000900 0x0000ff00>;
++	};
++
++	cs1_pin13: spi-cs1-pin13 {
++		pinctrl-single,bits = <0xc 0x00000a00 0x0000ff00>;
++	};
++};
++
++&spi {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&cs0_pin5 &cs1_pin13>;
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <25000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "u-boot";
++				reg = <0x000000 0x040000>;
++				read-only;
++			};
++
++			// Note: If this partition is moved, the mtd index must also be changed in
++			// package/boot/uboot-tools/uboot-envtools/files/ath79
++			partition@40000 {
++				label = "u-boot-env";
++				reg = <0x40000 0x10000>;
++
++				nvmem-layout {
++					compatible = "u-boot,env";
++				};
++			};
++
++			partition@50000 {
++				label = "unknown";
++				reg = <0x50000 0x10000>;
++				read-only;
++			};
++			
++			partition@60000 {
++				label = "loader";
++				reg = <0x60000 0x10000>;
++			};
++
++			fwconcat1: partition@70000 {
++				label = "fwconcat1";
++				reg = <0x70000 0x170000>;
++			};
++
++			fwconcat0: partition@1e0000 {
++				label = "fwconcat0";
++				reg = <0x1e0000 0xe10000>;
++			};
++
++			partition@ff0000 {
++				label = "art";
++				reg = <0xff0000 0x10000>;
++				read-only;
++
++				nvmem-layout {
++					compatible = "fixed-layout";
++					#address-cells = <1>;
++					#size-cells = <1>;
++
++					macaddr_art_0: macaddr@0 {
++						compatible = "mac-base";
++						reg = <0x0 0x6>;
++						#nvmem-cell-cells = <1>;
++					};
++
++					cal_art_1000: calibration@1000 {
++						reg = <0x1000 0x440>;
++					};
++
++					cal_art_5000: calibration@5000 {
++						reg = <0x5000 0x844>;
++					};
++				};
++			};
++
++			partition@1 {
++				label = "oem-backup";
++				reg = <0x40000 0xfb0000>;
++				read-only;
++			};
++		};
++	};
++
++	flash@1 {
++		compatible = "jedec,spi-nor";
++		reg = <1>;
++		spi-max-frequency = <25000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "opt";
++				reg = <0x0 0x1000000>;
++			};
++		};
++	};
++};
++
++&wdt {
++	status = "disabled";
++};
++
++&wmac {
++	status = "okay";
++
++	nvmem-cells = <&macaddr_art_0 1>, <&cal_art_1000>;
++	nvmem-cell-names = "mac-address", "calibration";
++};
++
++&pcie0 {
++	status = "okay";
++
++	wifi@0,0 {
++		compatible = "qcom,ath10k";
++		reg = <0x0000 0 0 0 0>;
++		nvmem-cells = <&cal_art_5000>, <&macaddr_art_0 2>;
++		nvmem-cell-names = "calibration", "mac-address";
++	};
++};
+diff --git a/target/linux/ath79/generic/base-files/etc/board.d/01_leds b/target/linux/ath79/generic/base-files/etc/board.d/01_leds
+index 870c2c322d..28de169582 100644
+--- a/target/linux/ath79/generic/base-files/etc/board.d/01_leds
++++ b/target/linux/ath79/generic/base-files/etc/board.d/01_leds
+@@ -33,7 +33,8 @@ tplink,cpe605-v1|\
+ tplink,cpe610-v1|\
+ tplink,cpe610-v2|\
+ tplink,tl-wa1201-v2|\
+-ubnt,litebeam-m5-xw)
++ubnt,litebeam-m5-xw|\
++watchguard,ap120)
+ 	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth0"
+ 	;;
+ tplink,tl-wdr6500-v2)
+diff --git a/target/linux/ath79/generic/base-files/etc/board.d/02_network b/target/linux/ath79/generic/base-files/etc/board.d/02_network
+index 6be9d44cf8..f8b433d8bc 100644
+--- a/target/linux/ath79/generic/base-files/etc/board.d/02_network
++++ b/target/linux/ath79/generic/base-files/etc/board.d/02_network
+@@ -124,6 +124,7 @@ ath79_setup_interfaces()
+ 	ubnt,unifiac-mesh|\
+ 	ubnt,unifi|\
+ 	watchguard,ap100|\
++	watchguard,ap120|\
+ 	watchguard,ap200|\
+ 	watchguard,ap300|\
+ 	wd,mynet-wifi-rangeextender|\
+diff --git a/target/linux/ath79/generic/base-files/lib/upgrade/platform.sh b/target/linux/ath79/generic/base-files/lib/upgrade/platform.sh
+index 77a80868d2..4faa3bc60e 100644
+--- a/target/linux/ath79/generic/base-files/lib/upgrade/platform.sh
++++ b/target/linux/ath79/generic/base-files/lib/upgrade/platform.sh
+@@ -56,6 +56,7 @@ platform_do_upgrade() {
+ 	engenius,enstationac-v1|\
+ 	engenius,ews660ap|\
+ 	watchguard,ap100|\
++	watchguard,ap120|\
+ 	watchguard,ap200|\
+ 	watchguard,ap300)
+ 		ENV_SCRIPT="/tmp/fw_env"
+diff --git a/target/linux/ath79/image/generic.mk b/target/linux/ath79/image/generic.mk
+index c5eb5895e6..83acfdc4c7 100644
+--- a/target/linux/ath79/image/generic.mk
++++ b/target/linux/ath79/image/generic.mk
+@@ -3210,6 +3210,21 @@ define Device/watchguard_ap100
+ endef
+ TARGET_DEVICES += watchguard_ap100
+ 
++define Device/watchguard_ap120
++  $(Device/senao_loader_okli)
++  SOC := qca9558
++  DEVICE_VENDOR := WatchGuard
++  DEVICE_MODEL := AP120
++  DEVICE_PACKAGES := ath10k-firmware-qca988x-ct kmod-ath10k-ct
++  IMAGE_SIZE := 14400k
++  LOADER_FLASH_OFFS := 0x1E0000
++  SENAO_IMGNAME := senao-ap120
++  WATCHGUARD_MAGIC := 82kdlzk2
++  IMAGE/factory.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-rootfs | pad-rootfs | \
++	check-size | senao-tar-gz $$$$(SENAO_IMGNAME) | watchguard-cksum $$$$(WATCHGUARD_MAGIC)
++endef
++TARGET_DEVICES += watchguard_ap120
++
+ define Device/watchguard_ap200
+   $(Device/senao_loader_okli)
+   SOC := ar9344
+-- 
+2.43.0
+
