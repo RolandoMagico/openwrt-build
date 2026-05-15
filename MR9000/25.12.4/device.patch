@@ -1,0 +1,365 @@
+From 14e28a446cfe48519f5d58b63947d0014f8a795c Mon Sep 17 00:00:00 2001
+From: Roland Reinl <reinlroland+github@gmail.com>
+Date: Thu, 16 Apr 2026 21:11:46 +0200
+Subject: [PATCH 1/2] ipq40xx: add support for Linksys MR9000
+
+This pull request is based on
+- the discussions in https://forum.openwrt.org/t/support-for-the-linksys-mr9000
+
+Device Specs:
+- Router is similar to EA8300 but with 512MB RAM and changed GPIOs
+- IPQ4019
+- Quad Core CPU
+- 512 MB RAM
+- 256 MB FLASH
+- 4 LAN ports, 1 WAN port
+- 1x2.4GHz (802.11n) and 2x5GHz (802.11c) wifi
+- 3 LEDs (Red, blue, green) which are routed to one indicator at the top of the case
+- 2 buttons (Reset, WPS)
+
+Disassembling the device:
+- There are 4 T10 screws at the bottom of the device which must be removed
+- All 4 screws are located under the rubber feet
+
+Serial interface:
+- The serial interface is already populated on the device with a 5-pin header
+- Pinout from front to back: 1:GND, 2: unknown, 3: RX, 4: TX, 5: VCC
+- Settings: 115200, 8N1
+
+MAC address layout:
+- Same as on MR8300
+  - MAC address is stored in the "devinfo" partition (entry "hw_mac_addr")
+  - The MAC address on the label is identical with the one in the devinfo partition
+  - The MAC address on the label is the WAN MAC address
+  - LAN MAC address is the one from the label + 1
+  - Wifi (2.4GHz) MAC is the one from the label + 2
+  - Wifi (1st 5GHz) MAC is the one from the label + 3
+  - Wifi (2nd 5GHz) MAC is the one from the label + 4
+
+Migrating to OpenWrt requires multiple steps:
+- Load and boot the initramfs image
+- Adapt U-Boot settings to support bigger kernels
+- Flash the sysupgrade image
+
+Load and boot initramfs:
+- Connect serial interface
+- Set up a TFTP server on IP 192.168.1.254
+- Copy openwrt-ipq40xx-generic-linksys_mr9000-initramfs-zImage.itb to TFTP server
+- Rename file to lion.img
+- Boot up the device and stop in U-Boot
+- Run the following U-Boot commands after a link has been established:
+  tftp
+  bootm
+- Initramfs image is started now.
+
+Adapt U-Boot settings to support bigger kernels:
+- Run "fw_printenv" in the initramfs image  after booting
+- There should be an entry kernsize=300000 which indicates the maximum size for the kernel is 3MB
+- Execute "fw_setenv kernsize 500000" to increase the max kernel size to 5MB
+- Check that the change are applied with "fw_printenv"
+
+Flash the sysupgrade image:
+- Default sysupgrade routine either with a initramfs image containing LuCI or via command line.
+
+Revert back to OEM firmware:
+- Flash the OEM firmware via sysupgrade
+- Forced update is required
+
+Signed-off-by: Karsten Rehn <rekados@posteo.de>
+Signed-off-by: Roland Reinl <reinlroland+github@gmail.com>
+---
+ .../uboot-tools/uboot-envtools/files/ipq40xx  |   3 +-
+ package/firmware/ipq-wifi/Makefile            |   2 +
+ .../ipq40xx/base-files/etc/board.d/02_network |   1 +
+ .../ipq40xx/base-files/etc/init.d/bootcount   |   1 +
+ .../etc/uci-defaults/05_fix-compat-version    |   3 +-
+ .../ipq40xx/base-files/lib/upgrade/linksys.sh |   2 +-
+ .../base-files/lib/upgrade/platform.sh        |   1 +
+ .../arm/boot/dts/qcom/qcom-ipq4019-mr9000.dts | 112 ++++++++++++++++++
+ target/linux/ipq40xx/image/generic.mk         |  18 +++
+ 9 files changed, 140 insertions(+), 3 deletions(-)
+ create mode 100644 target/linux/ipq40xx/files-6.12/arch/arm/boot/dts/qcom/qcom-ipq4019-mr9000.dts
+
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/ipq40xx b/package/boot/uboot-tools/uboot-envtools/files/ipq40xx
+index 6f16491747..fc0ac33334 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/ipq40xx
++++ b/package/boot/uboot-tools/uboot-envtools/files/ipq40xx
+@@ -45,7 +45,8 @@ linksys,ea6350v3)
+ 	;;
+ linksys,ea8300|\
+ linksys,mr6350|\
+-linksys,mr8300)
++linksys,mr8300|\
++linksys,mr9000)
+ 	ubootenv_add_uci_config "/dev/mtd7" "0x0" "0x40000" "0x20000"
+ 	;;
+ linksys,whw01)
+diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
+index d447eef73e..467f22c179 100644
+--- a/package/firmware/ipq-wifi/Makefile
++++ b/package/firmware/ipq-wifi/Makefile
+@@ -51,6 +51,7 @@ ALLWIFIBOARDS:= \
+ 	linksys_mr6350 \
+ 	linksys_mr7350 \
+ 	linksys_mr7500 \
++	linksys_mr9000 \
+ 	linksys_mx2000 \
+ 	linksys_mx4200 \
+ 	linksys_mx5300 \
+@@ -234,6 +235,7 @@ $(eval $(call generate-ipq-wifi-package,linksys_mr5500,Linksys MR5500))
+ $(eval $(call generate-ipq-wifi-package,linksys_mr6350,Linksys MR6350))
+ $(eval $(call generate-ipq-wifi-package,linksys_mr7350,Linksys MR7350))
+ $(eval $(call generate-ipq-wifi-package,linksys_mr7500,Linksys MR7500))
++$(eval $(call generate-ipq-wifi-package,linksys_mr9000,Linksys MR9000))
+ $(eval $(call generate-ipq-wifi-package,linksys_mx2000,Linksys MX2000))
+ $(eval $(call generate-ipq-wifi-package,linksys_mx4200,Linksys MX4200))
+ $(eval $(call generate-ipq-wifi-package,linksys_mx5300,Linksys MX5300))
+diff --git a/target/linux/ipq40xx/base-files/etc/board.d/02_network b/target/linux/ipq40xx/base-files/etc/board.d/02_network
+index cca50e621f..525e4d8186 100644
+--- a/target/linux/ipq40xx/base-files/etc/board.d/02_network
++++ b/target/linux/ipq40xx/base-files/etc/board.d/02_network
+@@ -19,6 +19,7 @@ ipq40xx_setup_interfaces()
+ 	linksys,ea8300|\
+ 	linksys,mr6350|\
+ 	linksys,mr8300|\
++	linksys,mr9000|\
+ 	mikrotik,hap-ac2|\
+ 	mikrotik,hap-ac3|\
+ 	mikrotik,hap-ac3-lte6-kit|\
+diff --git a/target/linux/ipq40xx/base-files/etc/init.d/bootcount b/target/linux/ipq40xx/base-files/etc/init.d/bootcount
+index 079edce24c..f93fb90a0f 100755
+--- a/target/linux/ipq40xx/base-files/etc/init.d/bootcount
++++ b/target/linux/ipq40xx/base-files/etc/init.d/bootcount
+@@ -41,6 +41,7 @@ boot() {
+ 	linksys,ea8300|\
+ 	linksys,mr6350|\
+ 	linksys,mr8300|\
++	linksys,mr9000|\
+ 	linksys,whw01|\
+ 	linksys,whw03v2)
+ 		mtd resetbc s_env || true
+diff --git a/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version b/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version
+index e0547c3650..cbafe3a520 100644
+--- a/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version
++++ b/target/linux/ipq40xx/base-files/etc/uci-defaults/05_fix-compat-version
+@@ -5,7 +5,8 @@ ezviz,cs-w3-wd1200g-eup|\
+ linksys,ea6350v3|\
+ linksys,ea8300|\
+ linksys,mr6350|\
+-linksys,mr8300)
++linksys,mr8300|\
++linksys,mr9000)
+ 	uci set system.@system[0].compat_version="2.0"
+ 	uci commit system
+ 	;;
+diff --git a/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh b/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh
+index 256b3cfb91..4ceac33803 100644
+--- a/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh
++++ b/target/linux/ipq40xx/base-files/lib/upgrade/linksys.sh
+@@ -16,7 +16,7 @@ linksys_get_target_firmware() {
+ 			"${cur_boot_part}" "${mtd_ubi0}"
+ 	fi
+ 
+-	# OEM U-Boot for EA6350v3, EA8300, MR6350 and MR8300; bootcmd=
++	# OEM U-Boot for EA6350v3, EA8300, MR6350, MR8300 and MR9000; bootcmd=
+ 	#  if test $auto_recovery = no;
+ 	#      then bootipq;
+ 	#  elif test $boot_part = 1;
+diff --git a/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh b/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
+index 7db23a1c77..28e11d9070 100644
+--- a/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
++++ b/target/linux/ipq40xx/base-files/lib/upgrade/platform.sh
+@@ -171,6 +171,7 @@ platform_do_upgrade() {
+ 	linksys,ea8300|\
+ 	linksys,mr6350|\
+ 	linksys,mr8300|\
++	linksys,mr9000|\
+ 	linksys,whw01|\
+ 	linksys,whw03v2)
+ 		platform_do_upgrade_linksys "$1"
+diff --git a/target/linux/ipq40xx/files-6.12/arch/arm/boot/dts/qcom/qcom-ipq4019-mr9000.dts b/target/linux/ipq40xx/files-6.12/arch/arm/boot/dts/qcom/qcom-ipq4019-mr9000.dts
+new file mode 100644
+index 0000000000..ea75f02339
+--- /dev/null
++++ b/target/linux/ipq40xx/files-6.12/arch/arm/boot/dts/qcom/qcom-ipq4019-mr9000.dts
+@@ -0,0 +1,112 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++
++#include <dt-bindings/leds/common.h>
++
++#include "qcom-ipq4019-xx8300.dtsi"
++
++/ {
++	model = "Linksys MR9000";
++	compatible = "linksys,mr9000", "qcom,ipq4019";
++
++	aliases {
++		led-boot = &led_blue;
++		led-failsafe = &led_red;
++		led-running = &led_green;
++		led-upgrade = &led_blue;
++		serial0 = &blsp1_uart1;
++        label-mac-device = &swport5;
++	};
++
++	// Top panel LEDs, above Linksys logo
++	leds {
++		compatible = "gpio-leds";
++
++		led_red: red {
++			function = LED_FUNCTION_ALARM;
++			color = <LED_COLOR_ID_RED>;
++			gpios = <&tlmm 47 GPIO_ACTIVE_HIGH>;
++			panic-indicator;
++		};
++
++		led_blue: blue {
++			function = LED_FUNCTION_POWER;
++			color = <LED_COLOR_ID_BLUE>;
++			gpios = <&tlmm 46 GPIO_ACTIVE_LOW>;
++		};
++
++		led_green: green {
++			function = LED_FUNCTION_POWER;
++			color = <LED_COLOR_ID_GREEN>;
++			gpios = <&tlmm 49 GPIO_ACTIVE_HIGH>;
++		};
++
++		// On back panel, above USB socket
++
++		led_usb: usb {
++			function = LED_FUNCTION_USB;
++			color = <LED_COLOR_ID_GREEN>;
++			gpios = <&tlmm 61 GPIO_ACTIVE_LOW>;
++			trigger-sources = <&usb3_port1>, <&usb3_port2>,
++					  <&usb2_port1>;
++			linux,default-trigger = "usbport";
++		};
++	};
++
++	keys {
++		compatible = "gpio-keys";
++
++		reset {
++			label = "reset";
++			linux,code = <KEY_RESTART>;
++			gpios = <&tlmm 50 GPIO_ACTIVE_LOW>;
++		};
++
++		wps {
++			label = "wps";
++			linux,code = <KEY_WPS_BUTTON>;
++			gpios = <&tlmm 18 GPIO_ACTIVE_LOW>;
++		};
++	};
++};
++
++&mdio {
++	status = "okay";
++	pinctrl-0 = <&mdio_pins>;
++	pinctrl-names = "default";
++	reset-gpios = <&tlmm 54 GPIO_ACTIVE_LOW>;
++	reset-delay-us = <2000>;
++	reset-post-delay-us = <5000>;
++};
++
++&tlmm {
++	status = "okay";
++	mdio_pins: mdio_pinmux {
++		mux_1 {
++			pins = "gpio6";
++			function = "mdio";
++			bias-pull-up;
++		};
++		mux_2 {
++			pins = "gpio7";
++			function = "mdc";
++			bias-pull-up;
++		};
++	};
++};
++
++&wifi0 {
++	status = "okay";
++	qcom,ath10k-calibration-variant = "linksys-mr9000";
++};
++
++&wifi1 {
++	status = "okay";
++	ieee80211-freq-limit = <5170000 5330000>;
++	qcom,ath10k-calibration-variant = "linksys-mr9000";
++};
++
++&wifi2 {
++	status = "okay";
++	ieee80211-freq-limit = <5490000 5835000>;
++	qcom,ath10k-calibration-variant = "linksys-mr9000";
++};
+diff --git a/target/linux/ipq40xx/image/generic.mk b/target/linux/ipq40xx/image/generic.mk
+index f89df0150b..4e155a3b07 100644
+--- a/target/linux/ipq40xx/image/generic.mk
++++ b/target/linux/ipq40xx/image/generic.mk
+@@ -747,6 +747,24 @@ define Device/linksys_mr8300
+ endef
+ TARGET_DEVICES += linksys_mr8300
+ 
++define Device/linksys_mr9000
++	$(call Device/FitzImage)
++	$(call Device/kernel-size-6350-8300)
++	DEVICE_VENDOR := Linksys
++	DEVICE_MODEL := MR9000
++	SOC := qcom-ipq4019
++	KERNEL_SIZE := 5120k
++	IMAGE_SIZE := 84992k
++	NAND_SIZE := 256m
++	BLOCKSIZE := 128k
++	PAGESIZE := 2048
++	UBINIZE_OPTS := -E 5    # EOD marks to "hide" factory sig at EOF
++	IMAGES += factory.bin
++	IMAGE/factory.bin  := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi | linksys-image type=MR9000
++	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-linksys_mr9000 kmod-usb-ledtrig-usbport
++endef
++TARGET_DEVICES += linksys_mr9000
++
+ define Device/linksys_whw01
+ 	$(call Device/FitzImage)
+ 	DEVICE_VENDOR := Linksys
+-- 
+2.50.1 (Apple Git-155)
+
+
+From 8d6298a884d4a41a44095d069078fb309dd3dddb Mon Sep 17 00:00:00 2001
+From: Roland Reinl <reinlroland+github@gmail.com>
+Date: Sat, 18 Apr 2026 08:46:16 +0200
+Subject: [PATCH 2/2] ipq40xx: add support for Linksys MR9000 (Temporary
+ change)
+
+This change modifies package/firmware/ipq-wifi/Makefile and should be reverted after the PR for the firmware files was merged.
+
+Signed-off-by: Roland Reinl <reinlroland+github@gmail.com>
+---
+ package/firmware/ipq-wifi/Makefile | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
+index 467f22c179..6947947fb8 100644
+--- a/package/firmware/ipq-wifi/Makefile
++++ b/package/firmware/ipq-wifi/Makefile
+@@ -5,10 +5,10 @@ PKG_NAME:=ipq-wifi
+ PKG_RELEASE:=1
+ 
+ PKG_SOURCE_PROTO:=git
+-PKG_SOURCE_URL=$(PROJECT_GIT)/project/firmware/qca-wireless.git
+-PKG_SOURCE_DATE:=2026-01-28
+-PKG_SOURCE_VERSION:=88514e5aab3e1c0dabad81c7ace815c2fa45565a
+-PKG_MIRROR_HASH:=d51f25001a8cf166bc6d42372861b4290c69dae1f8aaeb9b1e5d85f4b06f8545
++PKG_SOURCE_URL=https://github.com/RolandoMagico/firmware_qca-wireless.git
++PKG_SOURCE_DATE:=2026-04-18
++PKG_SOURCE_VERSION:=d0fe35fdd2f72c33e9c355ffaf84aecf8c4a660b
++PKG_MIRROR_HASH:=5d21beaecf5ac36dc76a71099951581d3c7d810f06590c2f7422020608476ca1
+ PKG_FLAGS:=nonshared
+ 
+ include $(INCLUDE_DIR)/package.mk
+-- 
+2.50.1 (Apple Git-155)
+
