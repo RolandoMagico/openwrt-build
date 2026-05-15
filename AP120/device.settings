@@ -1,1 +1,2 @@
+OPENWRT_TARGET_DIRECTORY=ath79/generic
 OPENWRT_TARGET_PROFILE=ath79-generic-watchguard_ap120
