@@ -1,15 +1,11 @@
 name: Generic Build Workflow
-run-name: Build ${{ inputs.repository }}, version ${{ inputs.version }} for device ${{ inputs.device }}
+run-name: Build version ${{ inputs.version }} for device ${{ inputs.device }}
 
 on:
   workflow_call:
     inputs:
       workflow:
         description: "The workflow which will be used"
-        required: true
-        type: string
-      repository:
-        description: "OpenWrt Repository"
         required: true
         type: string
       version:
@@ -35,6 +31,10 @@ on:
         type: boolean
         default: false
 
+env:
+  openwrt_release_repo: "openwrt/openWrt"
+  openwrt_development_repo: "RolandoMagico/openwrt"
+
 jobs:
   execute:
     runs-on: ubuntu-latest
@@ -53,13 +53,13 @@ jobs:
           gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
           python3-setuptools rsync swig unzip zlib1g-dev file wget
 
-      - name: Determine repository branch
-        id: determine_repo_branch
-        run: |
-          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
-          echo openwrt_git_branch=$OPENWRT_GIT_BRANCH >> "$GITHUB_OUTPUT"
-      - name: Checkout OpenWrt Repository
-        run: git clone https://github.com/${{ inputs.repository }}.git -b ${{ steps.determine_repo_branch.outputs.openwrt_git_branch }} ${{ inputs.openwrt_directory }}
+      - name: Checkout OpenWrt Release Repository
+        if: ${{ inputs.workflow == 'Release' }}
+        run: git clone https://github.com/${{ env.openwrt_release_repo }}.git -b v${{ inputs.version }} ${{ inputs.openwrt_directory }}
+
+      - name: Checkout OpenWrt Development Repository
+        if: ${{ inputs.workflow == 'Development' }}
+        run: git clone https://github.com/${{ env.openwrt_development_repo }}.git -b ${{ inputs.device }} ${{ inputs.openwrt_directory }}
 
       - name: Set up git user
         if: ${{ inputs.workflow == 'Release' || inputs.rebase }}
@@ -91,7 +91,7 @@ jobs:
       - name: Create basic config
         if: ${{ inputs.workflow == 'Release' }}
         run: |
-          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/device.settings
           wget -O ${{ inputs.openwrt_directory }}/.config "https://downloads.openwrt.org/releases/${{ inputs.version }}/targets/$OPENWRT_TARGET_DIRECTORY/config.buildinfo"
 
       - name: Make default config
@@ -107,7 +107,7 @@ jobs:
       - name: Compare vermagic
         if: ${{ inputs.workflow == 'Release' }}
         run: |
-          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/device.settings
           MANIFEST_FILE=openwrt-${{ inputs.version }}-${OPENWRT_TARGET_DIRECTORY//\//-}.manifest
           wget https://downloads.openwrt.org/releases/${{ inputs.version }}/targets/$OPENWRT_TARGET_DIRECTORY/$MANIFEST_FILE
           EXPECTED_VERMAGIC=$(grep '^kernel - ' "$MANIFEST_FILE" | grep -Eo '[0-9a-fA-F]{32}')
@@ -131,7 +131,7 @@ jobs:
       - name: Prepare Artifacts
         run: |
           mkdir output
-          source ${{ inputs.ci_directory }}/${{ inputs.device }}/${{ inputs.version }}/device.settings
+          source ${{ inputs.ci_directory }}/${{ inputs.device }}/device.settings
           cd ${{ inputs.openwrt_directory }}
           rsync -avm --include="config.buildinfo" \
                      --include="feeds.buildinfo" \

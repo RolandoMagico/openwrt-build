@@ -1,5 +1,5 @@
 name: Build OpenWrt Image
-run-name: Build ${{ inputs.repository }}, version ${{ inputs.version }} for device ${{ inputs.device }}
+run-name: Build version ${{ inputs.version }} for device ${{ inputs.device }}
 
 on:
   workflow_dispatch:
@@ -11,13 +11,6 @@ on:
         options:
           - Development
           - Release
-      repository:
-        description: "OpenWrt Repository"
-        required: true
-        type: choice
-        options:
-          - RolandoMagico/openwrt
-          - openwrt/openwrt
       version:
         description: "OpenWrt version to build"
         required: true
@@ -63,7 +56,6 @@ jobs:
     uses: ./.github/workflows/GenericBuildWorkflow.yml
     with:
       workflow: ${{ inputs.workflow }}
-      repository: ${{ inputs.repository }}
       version: ${{ inputs.version }}
       device: ${{ inputs.device }}
       ci_directory: ${{ inputs.ci_directory }}
